@@ -15,9 +15,6 @@ dependencies:
   firebase_auth: ^4.15.3
   cloud_firestore: ^4.13.6
 
-  # Agora - Visioconférence
-  agora_rtc_engine: ^6.3.0
-
   # Utilitaires
   cupertino_icons: ^1.0.2
 
