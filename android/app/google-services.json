@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "667181830171",
+    "project_id": "crux-8aa85",
+    "storage_bucket": "crux-8aa85.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:667181830171:android:85399beb4fc1d087c4e8be",
+        "android_client_info": {
+          "package_name": "com.example.crux"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfVNAL2cV47g9WHPtXsaE8_4pWFpy3-Ls"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
