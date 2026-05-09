@@ -6,8 +6,8 @@ import '../models/meeting_model.dart';
 import '../services/meeting_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
-import '../home/meeting_screen.dart';
-import '../home/login_screen.dart';
+import '../screens/meeting_screen.dart';
+import '../screens/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final UserModel user;
