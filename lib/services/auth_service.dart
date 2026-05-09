@@ -6,7 +6,6 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Inscription
   Future<UserModel?> register(String name, String email, String password) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
@@ -21,11 +20,11 @@ class AuthService {
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
       return user;
     } catch (e) {
+      print('ERREUR INSCRIPTION: $e');
       return null;
     }
   }
 
-  // Connexion
   Future<UserModel?> login(String email, String password) async {
     try {
       UserCredential result = await _auth.signInWithEmailAndPassword(
@@ -38,17 +37,14 @@ class AuthService {
           .get();
       return UserModel.fromMap(doc.data() as Map<String, dynamic>);
     } catch (e) {
-      print('ERREUR INSCRIPTION: $e');
+      print('ERREUR CONNEXION: $e');
       return null;
-    }
     }
   }
 
-  // Déconnexion
   Future<void> logout() async {
     await _auth.signOut();
   }
 
-  // Utilisateur actuel
   User? get currentUser => _auth.currentUser;
 }
