@@ -36,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: vérifiez les logs')),
+        SnackBar(content: Text(_authService.lastError ?? 'Erreur inconnue')),
       );
     }
   }

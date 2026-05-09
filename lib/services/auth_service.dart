@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String? lastError;
 
   Future<UserModel?> register(String name, String email, String password) async {
     try {
@@ -20,7 +21,7 @@ class AuthService {
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
       return user;
     } catch (e) {
-      print('ERREUR INSCRIPTION: $e');
+      lastError = e.toString();
       return null;
     }
   }
@@ -37,7 +38,7 @@ class AuthService {
           .get();
       return UserModel.fromMap(doc.data() as Map<String, dynamic>);
     } catch (e) {
-      print('ERREUR CONNEXION: $e');
+      lastError = e.toString();
       return null;
     }
   }
