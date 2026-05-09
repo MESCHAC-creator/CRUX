@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,19 +23,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Text(
-            'CRUX',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
+      home: const SplashScreen(),
     );
   }
 }
