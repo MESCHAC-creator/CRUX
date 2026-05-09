@@ -38,7 +38,9 @@ class AuthService {
           .get();
       return UserModel.fromMap(doc.data() as Map<String, dynamic>);
     } catch (e) {
+      print('ERREUR INSCRIPTION: $e');
       return null;
+    }
     }
   }
 

@@ -36,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur lors de l\'inscription')),
+        SnackBar(content: Text('Erreur: vérifiez les logs')),
       );
     }
   }
