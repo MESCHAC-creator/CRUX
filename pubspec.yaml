@@ -15,6 +15,13 @@ dependencies:
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
 
+  # Google Sign-In
+  google_sign_in: ^6.2.1
+
+  # Agora
+  agora_rtc_engine: ^6.3.2
+  permission_handler: ^11.3.1
+
   # Utilitaires
   cupertino_icons: ^1.0.2
 
