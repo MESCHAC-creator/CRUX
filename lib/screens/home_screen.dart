@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await _authService.logout();
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => LoginScreen()),
     );
   }
 
