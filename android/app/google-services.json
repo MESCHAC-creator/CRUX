@@ -12,7 +12,20 @@
           "package_name": "com.example.crux"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "667181830171-hh33slnac35vu85m9vjakt3l64rkdegr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.crux",
+            "certificate_hash": "665958842706b36e53d01a2d002ac35b93e7a394"
+          }
+        },
+        {
+          "client_id": "667181830171-cj4rpd0hgv7p5jpvaodo8q7f3hqdpsoi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDfVNAL2cV47g9WHPtXsaE8_4pWFpy3-Ls"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "667181830171-cj4rpd0hgv7p5jpvaodo8q7f3hqdpsoi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
