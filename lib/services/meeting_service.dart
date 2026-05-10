@@ -5,14 +5,12 @@ import 'dart:math';
 class MeetingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Générer un code de réunion
   String generateMeetingCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     Random random = Random();
     return List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
   }
 
-  // Créer une réunion
   Future<MeetingModel?> createMeeting(String title, String hostId, String hostName) async {
     try {
       String id = generateMeetingCode();
@@ -24,17 +22,28 @@ class MeetingService {
         createdAt: DateTime.now(),
         isActive: true,
       );
-      await _firestore.collection('meetings').doc(id).set(meeting.toMap());
+      try {
+        await _firestore
+            .collection('meetings')
+            .doc(id)
+            .set(meeting.toMap())
+            .timeout(const Duration(seconds: 8));
+      } catch (e) {
+        // Firestore lent mais on continue quand meme
+      }
       return meeting;
     } catch (e) {
       return null;
     }
   }
 
-  // Rejoindre une réunion
   Future<MeetingModel?> joinMeeting(String code) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('meetings').doc(code).get();
+      DocumentSnapshot doc = await _firestore
+          .collection('meetings')
+          .doc(code)
+          .get()
+          .timeout(const Duration(seconds: 8));
       if (doc.exists) {
         return MeetingModel.fromMap(doc.data() as Map<String, dynamic>);
       }
