@@ -36,19 +36,27 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }
 
   Future<void> _initAgora() async {
-    await _agoraService.initialize();
-    _agoraService.registerEventHandler(
-      onUserJoined: (uid) {
-        setState(() => _remoteUsers.add(uid));
-      },
-      onUserOffline: (uid) {
-        setState(() => _remoteUsers.remove(uid));
-      },
-      onJoinSuccess: () {
-        setState(() => _isJoined = true);
-      },
-    );
-    await _agoraService.joinChannel(widget.meeting.id);
+    try {
+      await _agoraService.initialize();
+      _agoraService.registerEventHandler(
+        onUserJoined: (uid) {
+          setState(() => _remoteUsers.add(uid));
+        },
+        onUserOffline: (uid) {
+          setState(() => _remoteUsers.remove(uid));
+        },
+        onJoinSuccess: () {
+          setState(() => _isJoined = true);
+        },
+      );
+      await _agoraService.joinChannel(widget.meeting.id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur video: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   void _sendMessage() {
@@ -213,7 +221,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
                           ),
                         Text(
                           msg['message']!,
-                          style: const TextStyle(color: Colors.white),
+                          style:
+                          const TextStyle(color: Colors.white),
                         ),
                         Text(
                           msg['time']!,
@@ -240,7 +249,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: 'Ecrire un message...',
-                      hintStyle: const TextStyle(color: Colors.white54),
+                      hintStyle:
+                      const TextStyle(color: Colors.white54),
                       filled: true,
                       fillColor: const Color(0xFF2A2A3E),
                       border: OutlineInputBorder(
@@ -259,7 +269,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
                 CircleAvatar(
                   backgroundColor: AppColors.primary,
                   child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white, size: 18),
+                    icon: const Icon(Icons.send,
+                        color: Colors.white, size: 18),
                     onPressed: _sendMessage,
                   ),
                 ),
@@ -303,7 +314,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
 
   Widget _buildControls() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+      padding:
+      const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
       color: const Color(0xFF1E1E2E),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -344,12 +356,14 @@ class _MeetingScreenState extends State<MeetingScreen> {
                     color: Colors.red,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.call_end, color: Colors.white),
+                  child:
+                  const Icon(Icons.call_end, color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'Quitter',
-                  style: TextStyle(color: Colors.white, fontSize: 11),
+                  style:
+                  TextStyle(color: Colors.white, fontSize: 11),
                 ),
               ],
             ),
@@ -367,7 +381,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 12),
               color: const Color(0xFF1E1E2E),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -394,7 +409,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.circle, color: Colors.green, size: 10),
+                      const Icon(Icons.circle,
+                          color: Colors.green, size: 10),
                       const SizedBox(width: 4),
                       Text(
                         _isJoined ? 'Connecte' : 'Connexion...',
@@ -412,8 +428,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
               child: _showChat
                   ? Row(
                 children: [
-                  Expanded(flex: 3, child: _buildVideoView()),
-                  Expanded(flex: 2, child: _buildChatPanel()),
+                  Expanded(
+                      flex: 3, child: _buildVideoView()),
+                  Expanded(
+                      flex: 2, child: _buildChatPanel()),
                 ],
               )
                   : _buildVideoView(),

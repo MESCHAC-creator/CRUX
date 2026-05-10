@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../utils/colors.dart';
 import '../utils/constants.dart';
 import '../models/user_model.dart';
-import '../models/meeting_model.dart';
 import '../services/meeting_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
@@ -21,51 +20,89 @@ class _HomeScreenState extends State<HomeScreen> {
   final MeetingService _meetingService = MeetingService();
   final AuthService _authService = AuthService();
   final TextEditingController _codeController = TextEditingController();
+  bool _isCreating = false;
+  bool _isJoining = false;
 
   void _createMeeting() async {
-    final meeting = await _meetingService.createMeeting(
-      'Réunion CRUX',
-      widget.user.uid,
-      widget.user.name,
-    );
-    if (meeting != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MeetingScreen(
-            meeting: meeting,
-            user: widget.user,
-          ),
-        ),
+    setState(() => _isCreating = true);
+    try {
+      final meeting = await _meetingService.createMeeting(
+        'Reunion CRUX',
+        widget.user.uid,
+        widget.user.name,
       );
+      if (meeting != null && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MeetingScreen(
+              meeting: meeting,
+              user: widget.user,
+            ),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible de creer la reunion')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCreating = false);
     }
   }
 
   void _joinMeeting() async {
-    final meeting = await _meetingService.joinMeeting(_codeController.text);
-    if (meeting != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MeetingScreen(
-            meeting: meeting,
-            user: widget.user,
-          ),
-        ),
-      );
-    } else {
+    if (_codeController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Réunion introuvable')),
+        const SnackBar(content: Text('Entrez un code de reunion')),
       );
+      return;
+    }
+    setState(() => _isJoining = true);
+    try {
+      final meeting = await _meetingService.joinMeeting(
+        _codeController.text.trim().toUpperCase(),
+      );
+      if (meeting != null && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MeetingScreen(
+              meeting: meeting,
+              user: widget.user,
+            ),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reunion introuvable')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isJoining = false);
     }
   }
 
   void _logout() async {
     await _authService.logout();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => LoginScreen()),
-    );
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
   }
 
   @override
@@ -95,37 +132,119 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Bonjour, ${widget.user.name} 👋',
+              'Bonjour, ${widget.user.name} !',
               style: const TextStyle(
                 color: AppColors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 48),
-            CustomButton(
-              text: AppConstants.newMeeting,
-              onPressed: _createMeeting,
+            const SizedBox(height: 8),
+            const Text(
+              'Que voulez-vous faire ?',
+              style: TextStyle(color: AppColors.grey, fontSize: 14),
             ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _codeController,
-              style: const TextStyle(color: AppColors.white),
-              decoration: InputDecoration(
-                hintText: AppConstants.meetingCode,
-                hintStyle: const TextStyle(color: AppColors.grey),
-                filled: true,
-                fillColor: AppColors.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
+            const SizedBox(height: 48),
+            // Nouvelle reunion
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.video_call, color: AppColors.primary, size: 28),
+                      SizedBox(width: 12),
+                      Text(
+                        'Nouvelle reunion',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Demarrez une reunion instantanee',
+                    style: TextStyle(color: AppColors.grey, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomButton(
+                    text: AppConstants.newMeeting,
+                    onPressed: _createMeeting,
+                    isLoading: _isCreating,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            CustomButton(
-              text: AppConstants.joinMeeting,
-              onPressed: _joinMeeting,
+            const SizedBox(height: 24),
+            // Rejoindre reunion
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.group_add, color: AppColors.primary, size: 28),
+                      SizedBox(width: 12),
+                      Text(
+                        'Rejoindre une reunion',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Entrez le code de la reunion',
+                    style: TextStyle(color: AppColors.grey, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _codeController,
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      letterSpacing: 4,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: InputDecoration(
+                      hintText: AppConstants.meetingCode,
+                      hintStyle: const TextStyle(color: AppColors.grey),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.tag,
+                        color: AppColors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomButton(
+                    text: AppConstants.joinMeeting,
+                    onPressed: _joinMeeting,
+                    isLoading: _isJoining,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
