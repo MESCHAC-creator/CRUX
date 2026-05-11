@@ -5,6 +5,7 @@ const String agoraAppId = '3ed3eb7e29c245df8fcd7eb10a346a3d';
 
 class AgoraService {
   RtcEngine? _engine;
+  bool _isRecording = false;
 
   Future<void> initialize() async {
     await [Permission.microphone, Permission.camera].request();
@@ -44,6 +45,64 @@ class AgoraService {
     await _engine!.muteLocalVideoStream(mute);
   }
 
+  // Enregistrement local
+  Future<bool> startRecording() async {
+    try {
+      await _engine!.startAudioRecording(const AudioRecordingConfiguration(
+        filePath: '/sdcard/Download/crux_recording.aac',
+        recordingQuality: AudioRecordingQuality.audioRecordingQualityHigh,
+      ));
+      _isRecording = true;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> stopRecording() async {
+    try {
+      await _engine!.stopAudioRecording();
+      _isRecording = false;
+    } catch (e) {
+      _isRecording = false;
+    }
+  }
+
+  // YouTube Live RTMP
+  Future<bool> startYoutubeLive(String streamKey) async {
+    try {
+      final config = LiveTranscoding(
+        width: 1280,
+        height: 720,
+        videoBitrate: 2000,
+        videoFramerate: 30,
+        audioSampleRate: AudioSampleRateType.audioSampleRate44100,
+        audioBitrate: 128,
+        audioChannels: 2,
+        transcodingUsers: [
+          const TranscodingUser(uid: 0, x: 0, y: 0, width: 1280, height: 720),
+        ],
+      );
+      await _engine!.setLiveTranscoding(config);
+      await _engine!.startRtmpStreamWithTranscoding(
+        url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey',
+        transcoding: config,
+      );
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> stopYoutubeLive(String streamKey) async {
+    try {
+      await _engine!.stopRtmpStream(
+          url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey');
+    } catch (e) {
+      // ignore
+    }
+  }
+
   void registerEventHandler({
     Function(int uid)? onUserJoined,
     Function(int uid)? onUserOffline,
@@ -63,10 +122,12 @@ class AgoraService {
   }
 
   Future<void> dispose() async {
+    if (_isRecording) await stopRecording();
     await _engine?.leaveChannel();
     await _engine?.release();
     _engine = null;
   }
 
+  bool get isRecording => _isRecording;
   RtcEngine? get engine => _engine;
 }

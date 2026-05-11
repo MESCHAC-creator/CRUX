@@ -22,21 +22,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
 
   void _register() async {
+    if (_nameController.text.trim().isEmpty ||
+        _emailController.text.trim().isEmpty ||
+        _passwordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Remplissez tous les champs')),
+      );
+      return;
+    }
+    if (_passwordController.text.trim().length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Le mot de passe doit avoir au moins 6 caracteres')),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
     final user = await _authService.register(
-      _nameController.text,
-      _emailController.text,
-      _passwordController.text,
+      _nameController.text.trim(),
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
     );
     setState(() => _isLoading = false);
-    if (user != null) {
+    if (user != null && mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
       );
-    } else {
+    } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_authService.lastError ?? 'Erreur inconnue')),
+        SnackBar(
+          content: Text(_authService.lastError ?? 'Erreur lors de l\'inscription'),
+          backgroundColor: AppColors.danger,
+        ),
       );
     }
   }
@@ -45,49 +63,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        iconTheme: const IconThemeData(color: AppColors.white),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Créer un compte',
-              style: TextStyle(
-                color: AppColors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.white),
+                onPressed: () => Navigator.pop(context),
               ),
-            ),
-            const SizedBox(height: 48),
-            CustomTextField(
-              hint: AppConstants.nameHint,
-              controller: _nameController,
-              icon: Icons.person,
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              hint: AppConstants.emailHint,
-              controller: _emailController,
-              icon: Icons.email,
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              hint: AppConstants.passwordHint,
-              controller: _passwordController,
-              icon: Icons.lock,
-              isPassword: true,
-            ),
-            const SizedBox(height: 24),
-            CustomButton(
-              text: AppConstants.registerButton,
-              onPressed: _register,
-              isLoading: _isLoading,
-            ),
-          ],
+              const SizedBox(height: 24),
+              const Text(
+                'Créer un compte',
+                style: TextStyle(
+                  color: AppColors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Rejoignez CRUX et commencez à collaborer',
+                style: TextStyle(color: AppColors.grey, fontSize: 13),
+              ),
+              const SizedBox(height: 40),
+              CustomTextField(
+                hint: AppConstants.nameHint,
+                controller: _nameController,
+                icon: Icons.person_outlined,
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                hint: AppConstants.emailHint,
+                controller: _emailController,
+                icon: Icons.email_outlined,
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                hint: AppConstants.passwordHint,
+                controller: _passwordController,
+                icon: Icons.lock_outlined,
+                isPassword: true,
+              ),
+              const SizedBox(height: 32),
+              CustomButton(
+                text: AppConstants.registerButton,
+                onPressed: _register,
+                isLoading: _isLoading,
+              ),
+            ],
+          ),
         ),
       ),
     );

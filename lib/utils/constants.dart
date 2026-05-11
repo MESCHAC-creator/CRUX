@@ -12,5 +12,7 @@ class AppConstants {
   static const String registerButton = 'S\'inscrire';
   static const String newMeeting = 'Nouvelle réunion';
   static const String joinMeeting = 'Rejoindre';
-  static const String meetingCode = 'Code de réunion';
+  static const String meetingCode = 'Code ex: ABC123';
+  static const String youtubeStreamKey = '';
+  static const String youtubeRtmpUrl = 'rtmp://a.rtmp.youtube.com/live2';
 }
