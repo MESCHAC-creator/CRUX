@@ -72,7 +72,7 @@ class AgoraService {
   Future<bool> startYoutubeLive(String streamKey) async {
     try {
       await _engine!.startRtmpStreamWithoutTranscoding(
-        url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey',
+        'rtmp://a.rtmp.youtube.com/live2/$streamKey',
       );
       return true;
     } catch (e) {
