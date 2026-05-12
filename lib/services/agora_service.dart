@@ -14,13 +14,16 @@ class AgoraService {
       appId: agoraAppId,
       channelProfile: ChannelProfileType.channelProfileCommunication,
     ));
+    await _engine!.setClientRole(
+        role: ClientRoleType.clientRoleBroadcaster);
+    await _engine!.enableAudio();
     await _engine!.enableVideo();
     await _engine!.startPreview();
   }
 
   Future<void> joinChannel(String channelName, {String? token}) async {
     await _engine!.joinChannel(
-      token: token ?? '',
+      token: '',
       channelId: channelName,
       uid: 0,
       options: const ChannelMediaOptions(
@@ -28,13 +31,19 @@ class AgoraService {
         channelProfile: ChannelProfileType.channelProfileCommunication,
         publishCameraTrack: true,
         publishMicrophoneTrack: true,
+        autoSubscribeAudio: true,
+        autoSubscribeVideo: true,
       ),
     );
   }
 
   Future<void> leaveChannel() async {
-    await _engine!.leaveChannel();
-    await _engine!.stopPreview();
+    try {
+      await _engine!.leaveChannel();
+      await _engine!.stopPreview();
+    } catch (e) {
+      // ignore
+    }
   }
 
   Future<void> muteLocalAudio(bool mute) async {
@@ -71,8 +80,16 @@ class AgoraService {
 
   Future<bool> startYoutubeLive(String streamKey) async {
     try {
-      await _engine!.startRtmpStreamWithoutTranscoding(
-        'rtmp://a.rtmp.youtube.com/live2/$streamKey',
+      await _engine!.startRtmpStreamWithTranscoding(
+        url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey',
+        transcoding: const LiveTranscoding(
+          width: 1280,
+          height: 720,
+          videoBitrate: 2000,
+          videoFramerate: 30,
+          audioBitrate: 128,
+          audioChannels: 2,
+        ),
       );
       return true;
     } catch (e) {
@@ -83,7 +100,7 @@ class AgoraService {
   Future<void> stopYoutubeLive(String streamKey) async {
     try {
       await _engine!.stopRtmpStream(
-        'rtmp://a.rtmp.youtube.com/live2/$streamKey',
+        url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey',
       );
     } catch (e) {
       // ignore
@@ -105,13 +122,20 @@ class AgoraService {
       onUserOffline: (connection, uid, reason) {
         onUserOffline?.call(uid);
       },
+      onError: (err, msg) {
+        print('Agora error: $err - $msg');
+      },
     ));
   }
 
   Future<void> dispose() async {
     if (_isRecording) await stopRecording();
-    await _engine?.leaveChannel();
-    await _engine?.release();
+    try {
+      await _engine?.leaveChannel();
+      await _engine?.release();
+    } catch (e) {
+      // ignore
+    }
     _engine = null;
   }
 
