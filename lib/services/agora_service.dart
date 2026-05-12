@@ -45,16 +45,17 @@ class AgoraService {
     await _engine!.muteLocalVideoStream(mute);
   }
 
-  // Enregistrement local
   Future<bool> startRecording() async {
     try {
-      await _engine!.startAudioRecording(const AudioRecordingConfiguration(
-        filePath: '/sdcard/Download/crux_recording.aac',
-        recordingQuality: AudioRecordingQuality.audioRecordingQualityHigh,
-      ));
+      await _engine!.startAudioRecording(
+        const AudioRecordingConfiguration(
+          filePath: '/sdcard/Download/crux_recording.aac',
+        ),
+      );
       _isRecording = true;
       return true;
     } catch (e) {
+      _isRecording = false;
       return false;
     }
   }
@@ -62,31 +63,16 @@ class AgoraService {
   Future<void> stopRecording() async {
     try {
       await _engine!.stopAudioRecording();
-      _isRecording = false;
     } catch (e) {
-      _isRecording = false;
+      // ignore
     }
+    _isRecording = false;
   }
 
-  // YouTube Live RTMP
   Future<bool> startYoutubeLive(String streamKey) async {
     try {
-      final config = LiveTranscoding(
-        width: 1280,
-        height: 720,
-        videoBitrate: 2000,
-        videoFramerate: 30,
-        audioSampleRate: AudioSampleRateType.audioSampleRate44100,
-        audioBitrate: 128,
-        audioChannels: 2,
-        transcodingUsers: [
-          const TranscodingUser(uid: 0, x: 0, y: 0, width: 1280, height: 720),
-        ],
-      );
-      await _engine!.setLiveTranscoding(config);
-      await _engine!.startRtmpStreamWithTranscoding(
+      await _engine!.startRtmpStreamWithoutTranscoding(
         url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey',
-        transcoding: config,
       );
       return true;
     } catch (e) {
@@ -97,7 +83,8 @@ class AgoraService {
   Future<void> stopYoutubeLive(String streamKey) async {
     try {
       await _engine!.stopRtmpStream(
-          url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey');
+        'rtmp://a.rtmp.youtube.com/live2/$streamKey',
+      );
     } catch (e) {
       // ignore
     }
