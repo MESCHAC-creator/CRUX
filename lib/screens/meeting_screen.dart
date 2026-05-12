@@ -124,7 +124,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                 ? 'Enregistrement demarre'
                 : 'Erreur enregistrement'),
             backgroundColor:
-            success ? AppColors.success : AppColors.danger,
+                success ? AppColors.success : AppColors.danger,
           ),
         );
       }
@@ -184,7 +184,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                         ? 'YouTube Live demarre !'
                         : 'Erreur YouTube Live'),
                     backgroundColor:
-                    success ? AppColors.success : AppColors.danger,
+                        success ? AppColors.success : AppColors.danger,
                   ),
                 );
               }
@@ -199,10 +199,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
     );
   }
 
-  void _stopYoutubeLive() async {
-    await _agoraService.stopYoutubeLive(
-        _streamKeyController.text.trim());
-    setState(() => _isLive = false);
+  Future<void> _stopYoutubeLive() async {
+    await _agoraService
+        .stopYoutubeLive(_streamKeyController.text.trim());
+    if (mounted) setState(() => _isLive = false);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -221,7 +221,11 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }
 
   void _endCall() async {
-    if (_isLive) await _stopYoutubeLive();
+    if (_isLive) {
+      await _agoraService
+          .stopYoutubeLive(_streamKeyController.text.trim());
+      if (mounted) setState(() => _isLive = false);
+    }
     await _agoraService.dispose();
     if (mounted) Navigator.pop(context);
   }
@@ -265,7 +269,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: AppColors.danger, size: 60),
+            const Icon(Icons.error_outline,
+                color: AppColors.danger, size: 60),
             const SizedBox(height: 16),
             const Text('Erreur de connexion video',
                 style: TextStyle(color: Colors.white, fontSize: 16)),
@@ -274,7 +279,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
                 _errorMessage!,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: const TextStyle(
+                    color: Colors.white54, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -299,84 +305,86 @@ class _MeetingScreenState extends State<MeetingScreen> {
 
     return Stack(
       children: [
-        // Video distante plein ecran
         Container(
           color: Colors.black,
           width: double.infinity,
           height: double.infinity,
           child: !_isJoined
               ? const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: AppColors.primary),
-                SizedBox(height: 16),
-                Text('Connexion en cours...',
-                    style: TextStyle(
-                        color: Colors.white54, fontSize: 16)),
-              ],
-            ),
-          )
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                          color: AppColors.primary),
+                      SizedBox(height: 16),
+                      Text('Connexion en cours...',
+                          style: TextStyle(
+                              color: Colors.white54, fontSize: 16)),
+                    ],
+                  ),
+                )
               : _remoteUsers.isEmpty
-              ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceLight,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.person,
-                      color: Colors.white54, size: 40),
-                ),
-                const SizedBox(height: 16),
-                const Text('En attente de participants...',
-                    style: TextStyle(
-                        color: Colors.white54, fontSize: 16)),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: _copyCode,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(20),
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceLight,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.person,
+                                color: Colors.white54, size: 40),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                              'En attente de participants...',
+                              style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 16)),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: _copyCode,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceLight,
+                                borderRadius:
+                                    BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Code: ${widget.meeting.id}',
+                                    style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 2),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(Icons.copy,
+                                      color: AppColors.primary,
+                                      size: 16),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : AgoraVideoView(
+                      controller: VideoViewController.remote(
+                        rtcEngine: _agoraService.engine!,
+                        canvas: VideoCanvas(uid: _remoteUsers.first),
+                        connection: RtcConnection(
+                            channelId: widget.meeting.id),
+                      ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Code: ${widget.meeting.id}',
-                          style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.copy,
-                            color: AppColors.primary, size: 16),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )
-              : AgoraVideoView(
-            controller: VideoViewController.remote(
-              rtcEngine: _agoraService.engine!,
-              canvas: VideoCanvas(uid: _remoteUsers.first),
-              connection:
-              RtcConnection(channelId: widget.meeting.id),
-            ),
-          ),
         ),
-
-        // Video locale petite fenetre
         if (_isJoined && _agoraService.engine != null)
           Positioned(
             top: 16,
@@ -386,7 +394,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
               height: 140,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary, width: 2),
+                border:
+                    Border.all(color: AppColors.primary, width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.5),
@@ -397,50 +406,44 @@ class _MeetingScreenState extends State<MeetingScreen> {
               clipBehavior: Clip.hardEdge,
               child: _isVideoOff
                   ? Container(
-                color: AppColors.surface,
-                child: Center(
-                  child: Text(
-                    widget.user.name.isNotEmpty
-                        ? widget.user.name[0].toUpperCase()
-                        : 'V',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              )
+                      color: AppColors.surface,
+                      child: Center(
+                        child: Text(
+                          widget.user.name.isNotEmpty
+                              ? widget.user.name[0].toUpperCase()
+                              : 'V',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    )
                   : AgoraVideoView(
-                controller: VideoViewController(
-                  rtcEngine: _agoraService.engine!,
-                  canvas: const VideoCanvas(uid: 0),
-                ),
-              ),
+                      controller: VideoViewController(
+                        rtcEngine: _agoraService.engine!,
+                        canvas: const VideoCanvas(uid: 0),
+                      ),
+                    ),
             ),
           ),
-
-        // Reaction emoji
         if (_reaction != null)
           Positioned(
             bottom: 100,
             left: 0,
             right: 0,
             child: Center(
-              child: Text(
-                _reaction!,
-                style: const TextStyle(fontSize: 72),
-              ),
+              child: Text(_reaction!,
+                  style: const TextStyle(fontSize: 72)),
             ),
           ),
-
-        // Badge LIVE
         if (_isLive)
           Positioned(
             top: 16,
             left: 16,
             child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.danger,
                 borderRadius: BorderRadius.circular(20),
@@ -459,15 +462,13 @@ class _MeetingScreenState extends State<MeetingScreen> {
               ),
             ),
           ),
-
-        // Badge REC
         if (_isRecording)
           Positioned(
             top: _isLive ? 52 : 16,
             left: 16,
             child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.red.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(20),
@@ -516,110 +517,110 @@ class _MeetingScreenState extends State<MeetingScreen> {
           ),
           Expanded(
             child: _messages.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.chat_bubble_outline,
-                      color: AppColors.grey, size: 48),
-                  const SizedBox(height: 12),
-                  const Text('Aucun message',
-                      style: TextStyle(color: AppColors.grey)),
-                  const Text('Soyez le premier a ecrire',
-                      style: TextStyle(
-                          color: AppColors.grey, fontSize: 12)),
-                ],
-              ),
-            )
-                : ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(12),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                final isMe = msg['sender'] == widget.user.name;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    mainAxisAlignment: isMe
-                        ? MainAxisAlignment.end
-                        : MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (!isMe) ...[
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: AppColors.primary,
-                          child: Text(
-                            msg['sender']!.isNotEmpty
-                                ? msg['sender']![0].toUpperCase()
-                                : 'U',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat_bubble_outline,
+                            color: AppColors.grey, size: 48),
+                        SizedBox(height: 12),
+                        Text('Aucun message',
+                            style: TextStyle(color: AppColors.grey)),
+                        Text('Soyez le premier a ecrire',
+                            style: TextStyle(
+                                color: AppColors.grey, fontSize: 12)),
                       ],
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
-                          constraints:
-                          const BoxConstraints(maxWidth: 220),
-                          decoration: BoxDecoration(
-                            color: isMe
-                                ? AppColors.primary
-                                : AppColors.surfaceLight,
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(18),
-                              topRight: const Radius.circular(18),
-                              bottomLeft: Radius.circular(isMe ? 18 : 4),
-                              bottomRight:
-                              Radius.circular(isMe ? 4 : 18),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                            children: [
-                              if (!isMe)
-                                Text(
-                                  msg['sender']!,
-                                  style: TextStyle(
-                                    color: AppColors.primary
-                                        .withOpacity(0.8),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = _messages[index];
+                      final isMe =
+                          msg['sender'] == widget.user.name;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          mainAxisAlignment: isMe
+                              ? MainAxisAlignment.end
+                              : MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (!isMe) ...[
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: AppColors.primary,
+                                child: Text(
+                                  msg['sender']!.isNotEmpty
+                                      ? msg['sender']![0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                constraints: const BoxConstraints(
+                                    maxWidth: 220),
+                                decoration: BoxDecoration(
+                                  color: isMe
+                                      ? AppColors.primary
+                                      : AppColors.surfaceLight,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(18),
+                                    topRight: const Radius.circular(18),
+                                    bottomLeft:
+                                        Radius.circular(isMe ? 18 : 4),
+                                    bottomRight:
+                                        Radius.circular(isMe ? 4 : 18),
                                   ),
                                 ),
-                              Text(
-                                msg['message']!,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                msg['time']!,
-                                style: TextStyle(
-                                  color: isMe
-                                      ? Colors.white60
-                                      : AppColors.grey,
-                                  fontSize: 10,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    if (!isMe)
+                                      Text(
+                                        msg['sender']!,
+                                        style: TextStyle(
+                                          color: AppColors.primary
+                                              .withOpacity(0.8),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    Text(msg['message']!,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14)),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      msg['time']!,
+                                      style: TextStyle(
+                                        color: isMe
+                                            ? Colors.white60
+                                            : AppColors.grey,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            if (isMe) const SizedBox(width: 8),
+                          ],
                         ),
-                      ),
-                      if (isMe) const SizedBox(width: 8),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           Container(
             padding: const EdgeInsets.all(12),
@@ -681,15 +682,16 @@ class _MeetingScreenState extends State<MeetingScreen> {
         mainAxisSize: MainAxisSize.min,
         children: reactions
             .map((e) => GestureDetector(
-          onTap: () {
-            _showReaction(e);
-            setState(() => _showMoreOptions = false);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(e, style: const TextStyle(fontSize: 24)),
-          ),
-        ))
+                  onTap: () {
+                    _showReaction(e);
+                    setState(() => _showMoreOptions = false);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(e,
+                        style: const TextStyle(fontSize: 24)),
+                  ),
+                ))
             .toList(),
       ),
     );
@@ -712,23 +714,34 @@ class _MeetingScreenState extends State<MeetingScreen> {
                   icon: _isRecording
                       ? Icons.stop_circle
                       : Icons.fiber_manual_record,
-                  label: _isRecording ? 'Arreter REC' : 'Enregistrer',
-                  color: _isRecording ? AppColors.danger : Colors.white,
+                  label:
+                      _isRecording ? 'Arreter REC' : 'Enregistrer',
+                  color:
+                      _isRecording ? AppColors.danger : Colors.white,
                   onTap: _toggleRecording,
                 ),
                 const SizedBox(width: 16),
                 _moreOptionButton(
                   icon: _isLive ? Icons.live_tv : Icons.cast,
-                  label: _isLive ? 'Arreter Live' : 'YouTube Live',
+                  label:
+                      _isLive ? 'Arreter Live' : 'YouTube Live',
                   color: _isLive ? AppColors.danger : Colors.white,
-                  onTap: _isLive ? _stopYoutubeLive : _showYoutubeLiveDialog,
+                  onTap:
+                      _isLive ? _stopYoutubeLive : _showYoutubeLiveDialog,
                 ),
                 const SizedBox(width: 16),
                 _moreOptionButton(
-                  icon: _isHandRaised ? Icons.back_hand : Icons.back_hand_outlined,
-                  label: _isHandRaised ? 'Baisser main' : 'Lever main',
-                  color: _isHandRaised ? AppColors.warning : Colors.white,
-                  onTap: () => setState(() => _isHandRaised = !_isHandRaised),
+                  icon: _isHandRaised
+                      ? Icons.back_hand
+                      : Icons.back_hand_outlined,
+                  label: _isHandRaised
+                      ? 'Baisser main'
+                      : 'Lever main',
+                  color: _isHandRaised
+                      ? AppColors.warning
+                      : Colors.white,
+                  onTap: () =>
+                      setState(() => _isHandRaised = !_isHandRaised),
                 ),
               ],
             ),
@@ -747,9 +760,12 @@ class _MeetingScreenState extends State<MeetingScreen> {
                 onTap: _toggleMute,
               ),
               _controlButton(
-                icon: _isVideoOff ? Icons.videocam_off : Icons.videocam,
+                icon: _isVideoOff
+                    ? Icons.videocam_off
+                    : Icons.videocam,
                 label: _isVideoOff ? 'Activer' : 'Video',
-                color: _isVideoOff ? AppColors.danger : Colors.white,
+                color:
+                    _isVideoOff ? AppColors.danger : Colors.white,
                 backgroundColor: _isVideoOff
                     ? AppColors.danger.withOpacity(0.2)
                     : AppColors.surfaceLight,
@@ -758,11 +774,13 @@ class _MeetingScreenState extends State<MeetingScreen> {
               _controlButton(
                 icon: Icons.chat_bubble_outline,
                 label: 'Chat',
-                color: _showChat ? AppColors.primary : Colors.white,
+                color:
+                    _showChat ? AppColors.primary : Colors.white,
                 backgroundColor: _showChat
                     ? AppColors.primary.withOpacity(0.2)
                     : AppColors.surfaceLight,
-                onTap: () => setState(() => _showChat = !_showChat),
+                onTap: () =>
+                    setState(() => _showChat = !_showChat),
                 badge: _messages.isNotEmpty && !_showChat
                     ? _messages.length.toString()
                     : null,
@@ -777,14 +795,15 @@ class _MeetingScreenState extends State<MeetingScreen> {
               _controlButton(
                 icon: Icons.more_horiz,
                 label: 'Plus',
-                color: _showMoreOptions ? AppColors.primary : Colors.white,
+                color: _showMoreOptions
+                    ? AppColors.primary
+                    : Colors.white,
                 backgroundColor: _showMoreOptions
                     ? AppColors.primary.withOpacity(0.2)
                     : AppColors.surfaceLight,
-                onTap: () =>
-                    setState(() => _showMoreOptions = !_showMoreOptions),
+                onTap: () => setState(
+                    () => _showMoreOptions = !_showMoreOptions),
               ),
-              // Bouton fin d'appel
               GestureDetector(
                 onTap: _endCall,
                 child: Column(
@@ -861,8 +880,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
           ),
           const SizedBox(height: 4),
           Text(label,
-              style:
-              const TextStyle(color: Colors.white70, fontSize: 11)),
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 11)),
         ],
       ),
     );
@@ -877,7 +896,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(12),
@@ -905,7 +925,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header style Zoom
             Container(
               padding: const EdgeInsets.symmetric(
                   horizontal: 16, vertical: 10),
@@ -941,7 +960,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   const Icon(Icons.copy,
-                                      color: AppColors.primary, size: 12),
+                                      color: AppColors.primary,
+                                      size: 12),
                                 ],
                               ),
                             ),
@@ -964,7 +984,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
                       ],
                     ),
                   ),
-                  // Participants count
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 6),
@@ -988,27 +1007,23 @@ class _MeetingScreenState extends State<MeetingScreen> {
                 ],
               ),
             ),
-
-            // Corps principal
             Expanded(
               child: _showChat
                   ? Row(
-                children: [
-                  Expanded(flex: 3, child: _buildVideoView()),
-                  Container(
-                    width: 1,
-                    color: AppColors.darkGrey,
-                  ),
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.38,
-                    child: _buildChatPanel(),
-                  ),
-                ],
-              )
+                      children: [
+                        Expanded(
+                            flex: 3, child: _buildVideoView()),
+                        Container(
+                            width: 1, color: AppColors.darkGrey),
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width *
+                              0.38,
+                          child: _buildChatPanel(),
+                        ),
+                      ],
+                    )
                   : _buildVideoView(),
             ),
-
-            // Barre de controles style Zoom
             _buildControls(),
           ],
         ),
