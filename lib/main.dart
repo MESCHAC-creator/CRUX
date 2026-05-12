@@ -1,138 +1,73 @@
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
+import 'screens/splash_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
+import 'models/user_model.dart';
 
-const String agoraAppId = '3ed3eb7e29c245df8fcd7eb10a346a3d';
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
 
-class AgoraService {
-  RtcEngine? _engine;
-  bool _isRecording = false;
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-  Future<void> initialize() async {
-    await [Permission.microphone, Permission.camera].request();
-    _engine = createAgoraRtcEngine();
-    await _engine!.initialize(const RtcEngineContext(
-      appId: agoraAppId,
-      channelProfile: ChannelProfileType.channelProfileCommunication,
-    ));
-    await _engine!.enableVideo();
-    await _engine!.startPreview();
-  }
-
-  Future<void> joinChannel(String channelName, {String? token}) async {
-    await _engine!.joinChannel(
-      token: token ?? '',
-      channelId: channelName,
-      uid: 0,
-      options: const ChannelMediaOptions(
-        clientRoleType: ClientRoleType.clientRoleBroadcaster,
-        channelProfile: ChannelProfileType.channelProfileCommunication,
-        publishCameraTrack: true,
-        publishMicrophoneTrack: true,
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'CRUX',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2D8CFF)),
+        useMaterial3: true,
       ),
+      home: const AuthWrapper(),
     );
   }
+}
 
-  Future<void> leaveChannel() async {
-    await _engine!.leaveChannel();
-    await _engine!.stopPreview();
-  }
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
 
-  Future<void> muteLocalAudio(bool mute) async {
-    await _engine!.muteLocalAudioStream(mute);
-  }
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
 
-  Future<void> muteLocalVideo(bool mute) async {
-    await _engine!.muteLocalVideoStream(mute);
-  }
-
-  Future<bool> startRecording() async {
-    try {
-      await _engine!.startAudioRecording(const AudioRecordingConfiguration(
-        filePath: '/sdcard/Download/crux_recording.aac',
-        encode: AudioEncodingType.audioEncodingTypeAac,
-        quality: AudioRecordingQuality.audioRecordingQualityHigh,
-      ));
-      _isRecording = true;
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<void> stopRecording() async {
-    try {
-      await _engine!.stopAudioRecording();
-      _isRecording = false;
-    } catch (e) {
-      _isRecording = false;
-    }
-  }
-
-  Future<bool> startYoutubeLive(String streamKey) async {
-    try {
-      final config = LiveTranscoding(
-        width: 1280,
-        height: 720,
-        videoBitrate: 2000,
-        videoFramerate: 30,
-        audioSampleRate: AudioSampleRateType.audioSampleRate44100,
-        audioBitrate: 128,
-        audioChannels: 2,
-        transcodingUsers: [
-          const TranscodingUser(
-            uid: 0,
-            x: 0,
-            y: 0,
-            width: 1280,
-            height: 720,
-          ),
-        ],
-      );
-      await _engine!.startRtmpStreamWithTranscoding(
-        url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey',
-        transcoding: config,
-      );
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<void> stopYoutubeLive(String streamKey) async {
-    try {
-      await _engine!.stopRtmpStream(
-        url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey',
-      );
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  void registerEventHandler({
-    Function(int uid)? onUserJoined,
-    Function(int uid)? onUserOffline,
-    Function()? onJoinSuccess,
-  }) {
-    _engine!.registerEventHandler(RtcEngineEventHandler(
-      onJoinChannelSuccess: (connection, elapsed) {
-        onJoinSuccess?.call();
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF1C1C1E),
+            body: Center(
+              child: CircularProgressIndicator(
+                  color: Color(0xFF2D8CFF)),
+            ),
+          );
+        }
+        if (snapshot.hasData && snapshot.data != null) {
+          final firebaseUser = snapshot.data!;
+          final user = UserModel(
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName ??
+                firebaseUser.email?.split('@')[0] ??
+                'Utilisateur',
+            email: firebaseUser.email ?? '',
+          );
+          return HomeScreen(user: user);
+        }
+        return const SplashScreen();
       },
-      onUserJoined: (connection, uid, elapsed) {
-        onUserJoined?.call(uid);
-      },
-      onUserOffline: (connection, uid, reason) {
-        onUserOffline?.call(uid);
-      },
-    ));
+    );
   }
-
-  Future<void> dispose() async {
-    if (_isRecording) await stopRecording();
-    await _engine?.leaveChannel();
-    await _engine?.release();
-    _engine = null;
-  }
-
-  bool get isRecording => _isRecording;
-  RtcEngine? get engine => _engine;
 }
