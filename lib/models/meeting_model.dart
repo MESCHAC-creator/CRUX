@@ -6,7 +6,7 @@ class MeetingModel {
   final DateTime createdAt;
   final bool isActive;
   final DateTime? scheduledAt;
-  final bool isScheduled;
+  final String? description;
 
   MeetingModel({
     required this.id,
@@ -16,7 +16,7 @@ class MeetingModel {
     required this.createdAt,
     required this.isActive,
     this.scheduledAt,
-    this.isScheduled = false,
+    this.description,
   });
 
   Map<String, dynamic> toMap() {
@@ -28,7 +28,7 @@ class MeetingModel {
       'createdAt': createdAt.toIso8601String(),
       'isActive': isActive,
       'scheduledAt': scheduledAt?.toIso8601String(),
-      'isScheduled': isScheduled,
+      'description': description,
     };
   }
 
@@ -43,7 +43,7 @@ class MeetingModel {
       scheduledAt: map['scheduledAt'] != null
           ? DateTime.parse(map['scheduledAt'])
           : null,
-      isScheduled: map['isScheduled'] ?? false,
+      description: map['description'],
     );
   }
 }

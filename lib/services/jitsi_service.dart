@@ -13,6 +13,16 @@ class JitsiService {
     Function()? onConferenceTerminated,
     Function(dynamic)? onError,
   }) async {
+    final listener = JitsiMeetEventListener(
+      conferenceJoined: (url) {
+        onConferenceJoined?.call();
+      },
+      conferenceTerminated: (url, error) {
+        onConferenceTerminated?.call();
+      },
+      conferenceWillJoin: (url) {},
+    );
+
     final options = JitsiMeetConferenceOptions(
       serverURL: 'https://meet.jit.si',
       room: roomName,
@@ -43,10 +53,14 @@ class JitsiService {
         email: userEmail,
       ),
     );
-    await _jitsiMeet.join(options);
+    await _jitsiMeet.join(options, listener);
   }
 
   Future<void> hangUp() async {
-    await _jitsiMeet.hangUp();
+    try {
+      await _jitsiMeet.hangUp();
+    } catch (e) {
+      // ignore
+    }
   }
 }

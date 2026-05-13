@@ -8,79 +8,77 @@ class MeetingService {
   String generateMeetingCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     Random random = Random();
-    return List.generate(
-        6, (index) => chars[random.nextInt(chars.length)]).join();
+    return List.generate(6,
+            (index) => chars[random.nextInt(chars.length)]).join();
   }
 
   Future<MeetingModel?> createMeeting(
       String title, String hostId, String hostName) async {
-    String id = generateMeetingCode();
-    MeetingModel meeting = MeetingModel(
-      id: id,
-      title: title,
-      hostId: hostId,
-      hostName: hostName,
-      createdAt: DateTime.now(),
-      isActive: true,
-    );
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await _firestore
-            .collection('meetings')
-            .doc(id)
-            .set(meeting.toMap())
-            .timeout(const Duration(seconds: 15));
-        DocumentSnapshot verify = await _firestore
-            .collection('meetings')
-            .doc(id)
-            .get()
-            .timeout(const Duration(seconds: 10));
-        if (verify.exists) return meeting;
-      } catch (e) {
-        if (attempt == 3) return null;
-        await Future.delayed(const Duration(seconds: 2));
-      }
+    try {
+      String id = generateMeetingCode();
+      MeetingModel meeting = MeetingModel(
+        id: id,
+        title: title,
+        hostId: hostId,
+        hostName: hostName,
+        createdAt: DateTime.now(),
+        isActive: true,
+      );
+      await _firestore
+          .collection('meetings')
+          .doc(id)
+          .set(meeting.toMap());
+      return meeting;
+    } catch (e) {
+      return null;
     }
-    return null;
   }
 
-  Future<MeetingModel?> scheduleMeeting(
-    String title,
-    String hostId,
-    String hostName,
-    DateTime scheduledAt, {
+  Future<MeetingModel?> scheduleMeeting({
+    required String title,
+    required String hostId,
+    required String hostName,
+    required DateTime scheduledAt,
     String? customCode,
+    String? description,
   }) async {
-    String id = customCode ?? generateMeetingCode();
-    MeetingModel meeting = MeetingModel(
-      id: id,
-      title: title,
-      hostId: hostId,
-      hostName: hostName,
-      createdAt: DateTime.now(),
-      isActive: true,
-      scheduledAt: scheduledAt,
-      isScheduled: true,
-    );
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await _firestore
-            .collection('meetings')
-            .doc(id)
-            .set(meeting.toMap())
-            .timeout(const Duration(seconds: 15));
-        DocumentSnapshot verify = await _firestore
-            .collection('meetings')
-            .doc(id)
-            .get()
-            .timeout(const Duration(seconds: 10));
-        if (verify.exists) return meeting;
-      } catch (e) {
-        if (attempt == 3) return null;
-        await Future.delayed(const Duration(seconds: 2));
-      }
+    try {
+      String id = customCode?.toUpperCase() ?? generateMeetingCode();
+      DocumentSnapshot existing =
+      await _firestore.collection('meetings').doc(id).get();
+      if (existing.exists) return null;
+      MeetingModel meeting = MeetingModel(
+        id: id,
+        title: title,
+        hostId: hostId,
+        hostName: hostName,
+        createdAt: DateTime.now(),
+        isActive: false,
+        scheduledAt: scheduledAt,
+        description: description,
+      );
+      await _firestore
+          .collection('meetings')
+          .doc(id)
+          .set(meeting.toMap());
+      return meeting;
+    } catch (e) {
+      return null;
     }
-    return null;
+  }
+
+  Future<MeetingModel?> joinMeeting(String code) async {
+    try {
+      DocumentSnapshot doc =
+      await _firestore.collection('meetings').doc(code).get();
+      if (doc.exists) {
+        return MeetingModel.fromMap(
+            doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<List<MeetingModel>> getScheduledMeetings(String hostId) async {
@@ -88,39 +86,25 @@ class MeetingService {
       QuerySnapshot snapshot = await _firestore
           .collection('meetings')
           .where('hostId', isEqualTo: hostId)
-          .where('isScheduled', isEqualTo: true)
-          .get()
-          .timeout(const Duration(seconds: 10));
+          .where('isActive', isEqualTo: false)
+          .get();
       return snapshot.docs
-          .map((doc) =>
-              MeetingModel.fromMap(doc.data() as Map<String, dynamic>))
-          .toList()
-        ..sort((a, b) => (a.scheduledAt ?? DateTime.now())
-            .compareTo(b.scheduledAt ?? DateTime.now()));
+          .map((doc) => MeetingModel.fromMap(
+          doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       return [];
     }
   }
 
-  Future<MeetingModel?> joinMeeting(String code) async {
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      try {
-        DocumentSnapshot doc = await _firestore
-            .collection('meetings')
-            .doc(code.toUpperCase())
-            .get()
-            .timeout(const Duration(seconds: 15));
-        if (doc.exists) {
-          return MeetingModel.fromMap(
-              doc.data() as Map<String, dynamic>);
-        } else {
-          return null;
-        }
-      } catch (e) {
-        if (attempt == 3) return null;
-        await Future.delayed(const Duration(seconds: 2));
-      }
+  Future<void> activateMeeting(String meetingId) async {
+    try {
+      await _firestore
+          .collection('meetings')
+          .doc(meetingId)
+          .update({'isActive': true});
+    } catch (e) {
+      // ignore
     }
-    return null;
   }
 }

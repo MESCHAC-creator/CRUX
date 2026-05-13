@@ -23,6 +23,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
   final JitsiService _jitsiService = JitsiService();
   bool _isJoining = false;
   bool _hasJoined = false;
+  bool _hasLeft = false;
 
   @override
   void initState() {
@@ -31,7 +32,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }
 
   Future<void> _joinMeeting() async {
-    setState(() => _isJoining = true);
+    setState(() {
+      _isJoining = true;
+      _hasLeft = false;
+    });
     try {
       await _jitsiService.joinMeeting(
         roomName: 'crux-${widget.meeting.id}',
@@ -41,7 +45,12 @@ class _MeetingScreenState extends State<MeetingScreen> {
           if (mounted) setState(() => _hasJoined = true);
         },
         onConferenceTerminated: () {
-          if (mounted) Navigator.pop(context);
+          if (mounted) {
+            setState(() {
+              _hasJoined = false;
+              _hasLeft = true;
+            });
+          }
         },
       );
       if (mounted) setState(() => _isJoining = false);
@@ -75,8 +84,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20)),
-        title: const Text('Quitter la reunion ?',
-            style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Quitter la reunion ?',
+          style: TextStyle(color: Colors.white),
+        ),
         content: const Text(
           'Voulez-vous vraiment quitter cette reunion ?',
           style: TextStyle(color: AppColors.grey),
@@ -104,6 +115,43 @@ class _MeetingScreenState extends State<MeetingScreen> {
     return false;
   }
 
+  Future<void> _endCall() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Quitter la reunion ?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Voulez-vous vraiment quitter cette reunion ?',
+          style: TextStyle(color: AppColors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Rester',
+                style: TextStyle(color: AppColors.primary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger),
+            child: const Text('Quitter',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await _jitsiService.hangUp();
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -113,6 +161,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
         body: SafeArea(
           child: Column(
             children: [
+              // Header
               Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 12),
@@ -198,6 +247,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
                   ],
                 ),
               ),
+
+              // Corps
               Expanded(
                 child: _isJoining
                     ? Center(
@@ -208,8 +259,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: AppColors.primary
-                              .withOpacity(0.2),
+                          color: AppColors.primary.withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Center(
@@ -221,8 +271,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                       const Text(
                         'Connexion a la reunion...',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16),
+                            color: Colors.white, fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -236,6 +285,66 @@ class _MeetingScreenState extends State<MeetingScreen> {
                     ],
                   ),
                 )
+                    : _hasLeft
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.videocam_off,
+                          color: AppColors.warning,
+                          size: 48,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Vous avez quitte la reunion',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Voulez-vous vous reconnecter ?',
+                        style: TextStyle(
+                            color: AppColors.grey, fontSize: 14),
+                      ),
+                      const SizedBox(height: 32),
+                      // Bouton reconnexion
+                      ElevatedButton.icon(
+                        onPressed: _joinMeeting,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Se reconnecter'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(16)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Retourner a l\'accueil',
+                          style:
+                          TextStyle(color: AppColors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
                     : Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -244,8 +353,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: AppColors.success
-                              .withOpacity(0.2),
+                          color: AppColors.success.withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -310,59 +418,21 @@ class _MeetingScreenState extends State<MeetingScreen> {
                   ),
                 ),
               ),
+
+              // Bouton quitter
               Container(
                 padding: const EdgeInsets.all(16),
                 color: AppColors.surface,
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          backgroundColor: AppColors.surface,
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(20)),
-                          title: const Text('Quitter la reunion ?',
-                              style:
-                              TextStyle(color: Colors.white)),
-                          content: const Text(
-                            'Voulez-vous vraiment quitter ?',
-                            style: TextStyle(color: AppColors.grey),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.pop(context, false),
-                              child: const Text('Rester',
-                                  style: TextStyle(
-                                      color: AppColors.primary)),
-                            ),
-                            ElevatedButton(
-                              onPressed: () =>
-                                  Navigator.pop(context, true),
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.danger),
-                              child: const Text('Quitter',
-                                  style: TextStyle(
-                                      color: Colors.white)),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        await _jitsiService.hangUp();
-                        if (mounted) Navigator.pop(context);
-                      }
-                    },
+                    onPressed: _endCall,
                     icon: const Icon(Icons.call_end),
                     label: const Text('Quitter la reunion'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.danger,
                       foregroundColor: Colors.white,
-                      padding:
-                      const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
                     ),
