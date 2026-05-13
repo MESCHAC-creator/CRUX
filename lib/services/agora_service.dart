@@ -14,13 +14,16 @@ class AgoraService {
       appId: agoraAppId,
       channelProfile: ChannelProfileType.channelProfileCommunication,
     ));
+    await _engine!.setClientRole(
+        role: ClientRoleType.clientRoleBroadcaster);
+    await _engine!.enableAudio();
     await _engine!.enableVideo();
     await _engine!.startPreview();
   }
 
   Future<void> joinChannel(String channelName, {String? token}) async {
     await _engine!.joinChannel(
-      token: token ?? '',
+      token: '',
       channelId: channelName,
       uid: 0,
       options: const ChannelMediaOptions(
@@ -28,13 +31,19 @@ class AgoraService {
         channelProfile: ChannelProfileType.channelProfileCommunication,
         publishCameraTrack: true,
         publishMicrophoneTrack: true,
+        autoSubscribeAudio: true,
+        autoSubscribeVideo: true,
       ),
     );
   }
 
   Future<void> leaveChannel() async {
-    await _engine!.leaveChannel();
-    await _engine!.stopPreview();
+    try {
+      await _engine!.leaveChannel();
+      await _engine!.stopPreview();
+    } catch (e) {
+      // ignore
+    }
   }
 
   Future<void> muteLocalAudio(bool mute) async {
@@ -47,14 +56,15 @@ class AgoraService {
 
   Future<bool> startRecording() async {
     try {
-      await _engine!.startAudioRecording(const AudioRecordingConfiguration(
-        filePath: '/sdcard/Download/crux_recording.aac',
-        encode: AudioEncodingType.audioEncodingTypeAac,
-        quality: AudioRecordingQuality.audioRecordingQualityHigh,
-      ));
+      await _engine!.startAudioRecording(
+        const AudioRecordingConfiguration(
+          filePath: '/sdcard/Download/crux_recording.aac',
+        ),
+      );
       _isRecording = true;
       return true;
     } catch (e) {
+      _isRecording = false;
       return false;
     }
   }
@@ -62,35 +72,24 @@ class AgoraService {
   Future<void> stopRecording() async {
     try {
       await _engine!.stopAudioRecording();
-      _isRecording = false;
     } catch (e) {
-      _isRecording = false;
+      // ignore
     }
+    _isRecording = false;
   }
 
   Future<bool> startYoutubeLive(String streamKey) async {
     try {
-      final config = LiveTranscoding(
-        width: 1280,
-        height: 720,
-        videoBitrate: 2000,
-        videoFramerate: 30,
-        audioSampleRate: AudioSampleRateType.audioSampleRate44100,
-        audioBitrate: 128,
-        audioChannels: 2,
-        transcodingUsers: [
-          const TranscodingUser(
-            uid: 0,
-            x: 0,
-            y: 0,
-            width: 1280,
-            height: 720,
-          ),
-        ],
-      );
       await _engine!.startRtmpStreamWithTranscoding(
         url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey',
-        transcoding: config,
+        transcoding: const LiveTranscoding(
+          width: 1280,
+          height: 720,
+          videoBitrate: 2000,
+          videoFramerate: 30,
+          audioBitrate: 128,
+          audioChannels: 2,
+        ),
       );
       return true;
     } catch (e) {
@@ -101,7 +100,7 @@ class AgoraService {
   Future<void> stopYoutubeLive(String streamKey) async {
     try {
       await _engine!.stopRtmpStream(
-        url: 'rtmp://a.rtmp.youtube.com/live2/$streamKey',
+        'rtmp://a.rtmp.youtube.com/live2/$streamKey',
       );
     } catch (e) {
       // ignore
@@ -128,8 +127,12 @@ class AgoraService {
 
   Future<void> dispose() async {
     if (_isRecording) await stopRecording();
-    await _engine?.leaveChannel();
-    await _engine?.release();
+    try {
+      await _engine?.leaveChannel();
+      await _engine?.release();
+    } catch (e) {
+      // ignore
+    }
     _engine = null;
   }
 
