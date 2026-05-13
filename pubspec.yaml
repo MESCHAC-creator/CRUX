@@ -18,8 +18,10 @@ dependencies:
   # Google Sign-In
   google_sign_in: ^6.2.1
 
-  # Agora
-  agora_rtc_engine: ^6.3.2
+  # Jitsi Meet
+  jitsi_meet_flutter_sdk: ^10.2.0
+
+  # Permissions
   permission_handler: ^11.3.1
 
   # Utilitaires
