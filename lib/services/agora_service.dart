@@ -1,6 +1,5 @@
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../utils/constants.dart';
 
 class AgoraService {
   RtcEngine? _engine;
@@ -10,7 +9,7 @@ class AgoraService {
     await [Permission.microphone, Permission.camera].request();
     _engine = createAgoraRtcEngine();
     await _engine!.initialize(const RtcEngineContext(
-      appId: AppConstants.agoraAppId,
+      appId: '3ed3eb7e29c245df8fcd7eb10a346a3d',
       channelProfile: ChannelProfileType.channelProfileCommunication,
     ));
     await _engine!.setClientRole(
@@ -43,7 +42,6 @@ class AgoraService {
     );
   }
 
-  // Mode faible connexion
   Future<void> enableLowBandwidthMode() async {
     await _engine!.setVideoEncoderConfiguration(
       const VideoEncoderConfiguration(
@@ -129,10 +127,12 @@ class AgoraService {
       onUserOffline: (connection, uid, reason) {
         onUserOffline?.call(uid);
       },
-      onAudioVolumeIndication: (connection, speakers, speakerNumber, totalVolume) {
+      onAudioVolumeIndication: (connection, speakers,
+          speakerNumber, totalVolume) {
         for (final speaker in speakers) {
           if ((speaker.volume ?? 0) > 50) {
-            onUserSpeaking?.call(speaker.uid ?? 0, speaker.volume ?? 0);
+            onUserSpeaking?.call(
+                speaker.uid ?? 0, speaker.volume ?? 0);
           }
         }
       },
