@@ -34,16 +34,16 @@ class _MyAppState extends State<MyApp> {
     setState(() => _locale = locale);
   }
 
-  Future<void> _loadLocale() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lang = prefs.getString('language') ?? 'fr';
-    setState(() => _locale = Locale(lang));
-  }
-
   @override
   void initState() {
     super.initState();
     _loadLocale();
+  }
+
+  Future<void> _loadLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lang = prefs.getString('language') ?? 'fr';
+    setState(() => _locale = Locale(lang));
   }
 
   @override
@@ -81,7 +81,7 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            backgroundColor: Color(0xFF1C1C1E),
+            backgroundColor: Color(0xFF111318),
             body: Center(
               child: CircularProgressIndicator(
                   color: Color(0xFF2D8CFF)),
