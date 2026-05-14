@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    compileSdk = 35
-    ndkVersion = "26.1.10909125"
+    compileSdk = 34
+    ndkVersion = "25.1.8937393"
 
     defaultConfig {
         applicationId = "com.example.crux"
         minSdk = 21
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
     }
@@ -48,5 +48,4 @@ flutter {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation("com.google.firebase:firebase-core:4.3.10")
 }
