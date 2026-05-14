@@ -3,12 +3,14 @@ class UserModel {
   final String name;
   final String email;
   final String? photoUrl;
+  final String role;
 
   UserModel({
     required this.uid,
     required this.name,
     required this.email,
     this.photoUrl,
+    this.role = 'user',
   });
 
   Map<String, dynamic> toMap() {
@@ -17,15 +19,17 @@ class UserModel {
       'name': name,
       'email': email,
       'photoUrl': photoUrl,
+      'role': role,
     };
   }
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      uid: map['uid'],
-      name: map['name'],
-      email: map['email'],
+      uid: map['uid'] ?? '',
+      name: map['name'] ?? '',
+      email: map['email'] ?? '',
       photoUrl: map['photoUrl'],
+      role: map['role'] ?? 'user',
     );
   }
 }
