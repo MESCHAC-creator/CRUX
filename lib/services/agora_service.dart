@@ -6,7 +6,6 @@ class AgoraService {
   bool _isRecording = false;
 
   Future<void> initialize() async {
-    // Demander les permissions
     final micStatus = await Permission.microphone.request();
     final cameraStatus = await Permission.camera.request();
     
@@ -21,14 +20,12 @@ class AgoraService {
       channelProfile: ChannelProfileType.channelProfileCommunication,
     ));
 
-    // Configuration audio
     await _engine!.enableAudio();
     await _engine!.setAudioProfile(
       profile: AudioProfileType.audioProfileDefault,
       scenario: AudioScenarioType.audioScenarioChatroom,
     );
 
-    // Configuration vidéo - IMPORTANT
     await _engine!.enableVideo();
     
     await _engine!.setVideoEncoderConfiguration(
@@ -36,19 +33,15 @@ class AgoraService {
         dimensions: VideoDimensions(width: 640, height: 480),
         frameRate: 15,
         bitrate: 800,
-        orientationMode:
-            OrientationMode.orientationModePortrait,
         degradationPreference:
             DegradationPreference.maintainFramerate,
       ),
     );
 
-    // Définir le rôle AVANT de démarrer l'aperçu
     await _engine!.setClientRole(
       role: ClientRoleType.clientRoleBroadcaster,
     );
 
-    // Démarrer l'aperçu vidéo
     await _engine!.startPreview();
   }
 
@@ -193,9 +186,6 @@ class AgoraService {
       },
       onError: (err, msg) {
         print('Agora error: $err - $msg');
-      },
-      onVideoSubscribed: (connection, uid, videoTrackInfo) {
-        print('Video subscribed: $uid');
       },
     ));
   }
