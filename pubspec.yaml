@@ -1,7 +1,7 @@
 name: crux
 description: Application de visioconférence CRUX
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -20,17 +20,17 @@ dependencies:
   # Google Sign-In
   google_sign_in: ^6.2.1
 
-  # Jitsi Meet
-  jitsi_meet_flutter_sdk: ^10.2.0
+  # Agora Video
+  agora_rtc_engine: ^6.3.2
 
   # Permissions
   permission_handler: ^11.3.1
 
+  # Preferences et stockage
+  shared_preferences: ^2.3.2
+
   # Date formatting
   intl: ^0.20.2
-
-  # Langue
-  shared_preferences: ^2.3.2
 
   # Utilitaires
   cupertino_icons: ^1.0.2
@@ -42,4 +42,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  generate: truesesion
+  generate: true
