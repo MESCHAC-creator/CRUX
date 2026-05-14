@@ -5,7 +5,6 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
-import 'package:crux/widgets/custom_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -33,7 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_passwordController.text.trim().length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Le mot de passe doit avoir au moins 6 caracteres')),
+            content: Text('Mot de passe minimum 6 caracteres')),
       );
       return;
     }
@@ -52,7 +51,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_authService.lastError ?? 'Erreur lors de l\'inscription'),
+          content: Text(
+              _authService.lastError ?? 'Erreur lors de l\'inscription'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -71,7 +71,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               const SizedBox(height: 24),
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.white),
+                icon: const Icon(Icons.arrow_back,
+                    color: AppColors.white),
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(height: 24),
