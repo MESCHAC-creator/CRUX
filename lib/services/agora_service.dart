@@ -6,48 +6,82 @@ class AgoraService {
   bool _isRecording = false;
 
   Future<void> initialize() async {
-    await [Permission.microphone, Permission.camera].request();
+    // Demander les permissions
+    final micStatus = await Permission.microphone.request();
+    final cameraStatus = await Permission.camera.request();
+    
+    if (!micStatus.isGranted || !cameraStatus.isGranted) {
+      throw Exception('Permissions refusees');
+    }
+
     _engine = createAgoraRtcEngine();
+    
     await _engine!.initialize(const RtcEngineContext(
       appId: '3ed3eb7e29c245df8fcd7eb10a346a3d',
       channelProfile: ChannelProfileType.channelProfileCommunication,
     ));
-    await _engine!.setClientRole(
-        role: ClientRoleType.clientRoleBroadcaster);
+
+    // Configuration audio
     await _engine!.enableAudio();
+    await _engine!.setAudioProfile(
+      profile: AudioProfileType.audioProfileDefault,
+      scenario: AudioScenarioType.audioScenarioChatroom,
+    );
+
+    // Configuration vidéo - IMPORTANT
     await _engine!.enableVideo();
+    
     await _engine!.setVideoEncoderConfiguration(
       const VideoEncoderConfiguration(
-        dimensions: VideoDimensions(width: 640, height: 360),
+        dimensions: VideoDimensions(width: 640, height: 480),
         frameRate: 15,
-        bitrate: 400,
+        bitrate: 800,
+        orientationMode:
+            OrientationMode.orientationModePortrait,
+        degradationPreference:
+            DegradationPreference.maintainFramerate,
       ),
     );
+
+    // Définir le rôle AVANT de démarrer l'aperçu
+    await _engine!.setClientRole(
+      role: ClientRoleType.clientRoleBroadcaster,
+    );
+
+    // Démarrer l'aperçu vidéo
     await _engine!.startPreview();
   }
 
-  Future<void> joinChannel(String channelName, {String? token}) async {
-    await _engine!.joinChannel(
-      token: '',
-      channelId: channelName,
-      uid: 0,
-      options: const ChannelMediaOptions(
-        clientRoleType: ClientRoleType.clientRoleBroadcaster,
-        channelProfile: ChannelProfileType.channelProfileCommunication,
-        publishCameraTrack: true,
-        publishMicrophoneTrack: true,
-        autoSubscribeAudio: true,
-        autoSubscribeVideo: true,
-      ),
-    );
+  Future<void> joinChannel(String channelName,
+      {String? token}) async {
+    try {
+      await _engine!.joinChannel(
+        token: '',
+        channelId: channelName,
+        uid: 0,
+        options: const ChannelMediaOptions(
+          clientRoleType: ClientRoleType.clientRoleBroadcaster,
+          channelProfile:
+              ChannelProfileType.channelProfileCommunication,
+          publishCameraTrack: true,
+          publishMicrophoneTrack: true,
+          autoSubscribeAudio: true,
+          autoSubscribeVideo: true,
+          enableAudioRecordingOrPlayout: true,
+        ),
+      );
+    } catch (e) {
+      print('Erreur joinChannel: $e');
+      rethrow;
+    }
   }
 
   Future<void> enableLowBandwidthMode() async {
     await _engine!.setVideoEncoderConfiguration(
       const VideoEncoderConfiguration(
-        dimensions: VideoDimensions(width: 320, height: 180),
+        dimensions: VideoDimensions(width: 320, height: 240),
         frameRate: 10,
-        bitrate: 150,
+        bitrate: 200,
       ),
     );
   }
@@ -55,36 +89,53 @@ class AgoraService {
   Future<void> disableLowBandwidthMode() async {
     await _engine!.setVideoEncoderConfiguration(
       const VideoEncoderConfiguration(
-        dimensions: VideoDimensions(width: 640, height: 360),
+        dimensions: VideoDimensions(width: 640, height: 480),
         frameRate: 15,
-        bitrate: 400,
+        bitrate: 800,
       ),
     );
   }
 
   Future<void> leaveChannel() async {
     try {
-      await _engine!.leaveChannel();
       await _engine!.stopPreview();
+      await _engine!.leaveChannel();
     } catch (e) {
-      // ignore
+      print('Erreur leaveChannel: $e');
     }
   }
 
   Future<void> muteLocalAudio(bool mute) async {
-    await _engine!.muteLocalAudioStream(mute);
+    try {
+      await _engine!.muteLocalAudioStream(mute);
+    } catch (e) {
+      print('Erreur muteLocalAudio: $e');
+    }
   }
 
   Future<void> muteLocalVideo(bool mute) async {
-    await _engine!.muteLocalVideoStream(mute);
+    try {
+      await _engine!.muteLocalVideoStream(mute);
+    } catch (e) {
+      print('Erreur muteLocalVideo: $e');
+    }
   }
 
   Future<void> muteRemoteAudio(int uid, bool mute) async {
-    await _engine!.muteRemoteAudioStream(uid: uid, mute: mute);
+    try {
+      await _engine!.muteRemoteAudioStream(uid: uid, mute: mute);
+    } catch (e) {
+      print('Erreur muteRemoteAudio: $e');
+    }
   }
 
   Future<void> muteRemoteVideo(int uid, bool mute) async {
-    await _engine!.muteRemoteVideoStream(uid: uid, mute: mute);
+    try {
+      await _engine!.muteRemoteVideoStream(
+          uid: uid, mute: mute);
+    } catch (e) {
+      print('Erreur muteRemoteVideo: $e');
+    }
   }
 
   Future<bool> startRecording() async {
@@ -97,6 +148,7 @@ class AgoraService {
       _isRecording = true;
       return true;
     } catch (e) {
+      print('Erreur startRecording: $e');
       _isRecording = false;
       return false;
     }
@@ -106,7 +158,7 @@ class AgoraService {
     try {
       await _engine!.stopAudioRecording();
     } catch (e) {
-      // ignore
+      print('Erreur stopRecording: $e');
     }
     _isRecording = false;
   }
@@ -119,12 +171,15 @@ class AgoraService {
   }) {
     _engine!.registerEventHandler(RtcEngineEventHandler(
       onJoinChannelSuccess: (connection, elapsed) {
+        print('Joined channel successfully');
         onJoinSuccess?.call();
       },
       onUserJoined: (connection, uid, elapsed) {
+        print('User joined: $uid');
         onUserJoined?.call(uid);
       },
       onUserOffline: (connection, uid, reason) {
+        print('User offline: $uid');
         onUserOffline?.call(uid);
       },
       onAudioVolumeIndication: (connection, speakers,
@@ -136,16 +191,23 @@ class AgoraService {
           }
         }
       },
+      onError: (err, msg) {
+        print('Agora error: $err - $msg');
+      },
+      onVideoSubscribed: (connection, uid, videoTrackInfo) {
+        print('Video subscribed: $uid');
+      },
     ));
   }
 
   Future<void> dispose() async {
     if (_isRecording) await stopRecording();
     try {
+      await _engine?.stopPreview();
       await _engine?.leaveChannel();
       await _engine?.release();
     } catch (e) {
-      // ignore
+      print('Erreur dispose: $e');
     }
     _engine = null;
   }
