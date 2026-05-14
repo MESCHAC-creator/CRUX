@@ -39,10 +39,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        title: const Text(
-          'Parametres',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Parametres',
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
@@ -50,15 +49,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Langue',
-              style: TextStyle(
-                color: AppColors.grey,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
+            const Text('LANGUE',
+                style: TextStyle(
+                    color: AppColors.grey,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5)),
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
@@ -69,15 +65,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 children: [
                   _languageTile(
-                    flag: '🇫🇷',
-                    language: 'Francais',
-                    code: 'fr',
-                  ),
-                  Divider(color: Colors.white10, height: 1),
+                      flag: '🇫🇷',
+                      language: 'Francais',
+                      code: 'fr'),
+                  const Divider(
+                      color: Colors.white10, height: 1),
                   _languageTile(
-                    flag: '🇬🇧',
-                    language: 'English',
-                    code: 'en',
+                      flag: '🇬🇧',
+                      language: 'English',
+                      code: 'en'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Text('A PROPOS',
+                style: TextStyle(
+                    color: AppColors.grey,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.videocam,
+                      color: AppColors.primary, size: 32),
+                  SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Text('CRUX',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              letterSpacing: 4)),
+                      Text('Version 2.0.0',
+                          style: TextStyle(
+                              color: AppColors.grey,
+                              fontSize: 12)),
+                    ],
                   ),
                 ],
               ),
@@ -100,16 +134,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: Text(
         language,
         style: TextStyle(
-          color: isSelected ? AppColors.primary : Colors.white,
-          fontWeight:
-          isSelected ? FontWeight.bold : FontWeight.normal,
+          color:
+              isSelected ? AppColors.primary : Colors.white,
+          fontWeight: isSelected
+              ? FontWeight.bold
+              : FontWeight.normal,
         ),
       ),
       trailing: isSelected
           ? const Icon(Icons.check_circle,
-          color: AppColors.primary, size: 22)
+              color: AppColors.primary, size: 22)
           : const Icon(Icons.circle_outlined,
-          color: AppColors.grey, size: 22),
+              color: AppColors.grey, size: 22),
     );
   }
 }
