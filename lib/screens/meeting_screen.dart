@@ -128,14 +128,26 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }
 
   void _toggleRecording() async {
+    final isHost = widget.meeting.hostId == widget.user.uid;
+    final isCoHost = widget.meeting.coHosts.contains(widget.user.uid);
+
+    if (!isHost && !isCoHost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seul l\'hote et les co-hotes peuvent enregistrer'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
     if (_isRecording) {
       await _agoraService.stopRecording();
       setState(() => _isRecording = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-                'Enregistrement sauvegarde dans Telechargements'),
+            content: Text('Enregistrement sauvegarde dans Telechargements'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -362,8 +374,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
                       ),
                     ),
         ),
-
-        // Video locale
         if (_isJoined && _agoraService.engine != null)
           Positioned(
             top: 16,
@@ -407,8 +417,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
                     ),
             ),
           ),
-
-        // Reaction
         if (_reaction != null)
           Positioned(
             bottom: 100,
@@ -419,8 +427,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
                   style: const TextStyle(fontSize: 72)),
             ),
           ),
-
-        // Badge REC
         if (_isRecording)
           Positioned(
             top: 16,
@@ -447,8 +453,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
               ),
             ),
           ),
-
-        // Badge faible connexion
         if (_isLowBandwidth)
           Positioned(
             top: _isRecording ? 52 : 16,
@@ -713,6 +717,11 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }
 
   Widget _buildControls() {
+    final isHost = widget.meeting.hostId == widget.user.uid;
+    final isCoHost =
+        widget.meeting.coHosts.contains(widget.user.uid);
+    final canRecord = isHost || isCoHost;
+
     return Container(
       padding: const EdgeInsets.symmetric(
           vertical: 16, horizontal: 12),
@@ -727,18 +736,35 @@ class _MeetingScreenState extends State<MeetingScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _moreOptionButton(
-                    icon: _isRecording
-                        ? Icons.stop_circle
-                        : Icons.fiber_manual_record,
-                    label: _isRecording
-                        ? 'Arreter REC'
-                        : 'Enregistrer',
-                    color: _isRecording
-                        ? AppColors.danger
-                        : Colors.white,
-                    onTap: _toggleRecording,
-                  ),
+                  if (canRecord)
+                    _moreOptionButton(
+                      icon: _isRecording
+                          ? Icons.stop_circle
+                          : Icons.fiber_manual_record,
+                      label: _isRecording
+                          ? 'Arreter REC'
+                          : 'Enregistrer',
+                      color: _isRecording
+                          ? AppColors.danger
+                          : Colors.white,
+                      onTap: _toggleRecording,
+                    )
+                  else
+                    _moreOptionButton(
+                      icon: Icons.fiber_manual_record,
+                      label: 'Enregistrer',
+                      color: AppColors.grey,
+                      onTap: () {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Seul l\'hote peut enregistrer'),
+                            backgroundColor: AppColors.danger,
+                          ),
+                        );
+                      },
+                    ),
                   const SizedBox(width: 12),
                   _moreOptionButton(
                     icon: _isLowBandwidth
