@@ -14,9 +14,12 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController =
+      TextEditingController();
+  final TextEditingController _emailController =
+      TextEditingController();
+  final TextEditingController _passwordController =
+      TextEditingController();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
@@ -25,14 +28,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _emailController.text.trim().isEmpty ||
         _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Remplissez tous les champs')),
+        const SnackBar(
+            content: Text('Remplissez tous les champs')),
       );
       return;
     }
     if (_passwordController.text.trim().length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Mot de passe minimum 6 caracteres')),
+            content:
+                Text('Mot de passe minimum 6 caracteres')),
       );
       return;
     }
@@ -46,13 +51,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (user != null && mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
+        MaterialPageRoute(
+            builder: (_) => HomeScreen(user: user)),
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              _authService.lastError ?? 'Erreur lors de l\'inscription'),
+          content: Text(_authService.lastError ??
+              'Erreur lors de l\'inscription'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -87,7 +93,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Rejoignez CRUX et commencez à collaborer',
-                style: TextStyle(color: AppColors.grey, fontSize: 13),
+                style: TextStyle(
+                    color: AppColors.grey, fontSize: 13),
               ),
               const SizedBox(height: 40),
               CustomTextField(
