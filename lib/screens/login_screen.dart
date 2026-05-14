@@ -42,7 +42,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_authService.lastError ?? 'Email ou mot de passe incorrect'),
+          content: Text(
+              _authService.lastError ?? 'Email ou mot de passe incorrect'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -65,7 +66,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryDark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
@@ -82,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               const Center(
                 child: Text(
                   'CRUX',
@@ -99,6 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Text(
                   AppConstants.tagline,
                   style: TextStyle(color: AppColors.grey, fontSize: 13),
+                  textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(height: 48),
