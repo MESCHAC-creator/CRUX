@@ -6,7 +6,12 @@ class MeetingModel {
   final DateTime createdAt;
   final bool isActive;
   final DateTime? scheduledAt;
-  final String? description;
+  final bool isScheduled;
+  final String mode;
+  final String? password;
+  final bool waitingRoom;
+  final List<String> coHosts;
+  final int maxParticipants;
 
   MeetingModel({
     required this.id,
@@ -16,7 +21,12 @@ class MeetingModel {
     required this.createdAt,
     required this.isActive,
     this.scheduledAt,
-    this.description,
+    this.isScheduled = false,
+    this.mode = 'standard',
+    this.password,
+    this.waitingRoom = false,
+    this.coHosts = const [],
+    this.maxParticipants = 100,
   });
 
   Map<String, dynamic> toMap() {
@@ -28,22 +38,32 @@ class MeetingModel {
       'createdAt': createdAt.toIso8601String(),
       'isActive': isActive,
       'scheduledAt': scheduledAt?.toIso8601String(),
-      'description': description,
+      'isScheduled': isScheduled,
+      'mode': mode,
+      'password': password,
+      'waitingRoom': waitingRoom,
+      'coHosts': coHosts,
+      'maxParticipants': maxParticipants,
     };
   }
 
   factory MeetingModel.fromMap(Map<String, dynamic> map) {
     return MeetingModel(
-      id: map['id'],
-      title: map['title'],
-      hostId: map['hostId'],
-      hostName: map['hostName'],
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      hostId: map['hostId'] ?? '',
+      hostName: map['hostName'] ?? '',
       createdAt: DateTime.parse(map['createdAt']),
       isActive: map['isActive'] ?? true,
       scheduledAt: map['scheduledAt'] != null
           ? DateTime.parse(map['scheduledAt'])
           : null,
-      description: map['description'],
+      isScheduled: map['isScheduled'] ?? false,
+      mode: map['mode'] ?? 'standard',
+      password: map['password'],
+      waitingRoom: map['waitingRoom'] ?? false,
+      coHosts: List<String>.from(map['coHosts'] ?? []),
+      maxParticipants: map['maxParticipants'] ?? 100,
     );
   }
 }
