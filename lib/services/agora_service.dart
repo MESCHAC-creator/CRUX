@@ -25,7 +25,7 @@ class AgoraService {
       print('📱 Creating Agora RTC Engine...');
       _engine = createAgoraRtcEngine();
       
-      // 3. INITIALIZE ENGINE
+      // 3. INITIALIZE ENGINE WITH CORRECT APP ID
       print('🔧 Initializing engine with App ID...');
       await _engine!.initialize(const RtcEngineContext(
         appId: '729bb936e5084d53897e43c58ee8e946',
@@ -94,7 +94,7 @@ class AgoraService {
       await _engine!.joinChannel(
         token: token ?? '',
         channelId: channelName,
-        uid: 0, // 0 means auto-assign UID
+        uid: 0,
         options: const ChannelMediaOptions(
           clientRoleType: ClientRoleType.clientRoleBroadcaster,
           channelProfile: ChannelProfileType.channelProfileCommunication,
@@ -278,10 +278,6 @@ class AgoraService {
       
       onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) {
         print('🎤 Remote audio state: uid=$remoteUid, state=$state, reason=$reason');
-      },
-      
-      onLocalVideoStats: (connection, sourceType, stats) {
-        print('📊 Local video stats: resolution=${stats.width}x${stats.height}, fps=${stats.sentFrameRate}');
       },
     ));
   }
