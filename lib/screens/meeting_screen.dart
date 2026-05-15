@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'dart:ui' as ui;
 import '../utils/colors.dart';
 import '../models/user_model.dart';
 import '../models/meeting_model.dart';
@@ -22,11 +23,12 @@ class MeetingScreen extends StatefulWidget {
 
 class _MeetingScreenState extends State<MeetingScreen> {
   final AgoraService _agoraService = AgoraService();
-  final TextEditingController _messageController =
-      TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<Map<String, String>> _messages = [];
   final List<int> _remoteUsers = [];
+  final List<Offset> _whitboardPoints = [];
+  
   bool _isMuted = false;
   bool _isVideoOff = false;
   bool _showChat = false;
@@ -36,6 +38,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
   bool _showMoreOptions = false;
   bool _isHandRaised = false;
   bool _isLowBandwidth = false;
+  bool _isWhiteboard = false;
+  bool _isScreenSharing = false;
+  bool _showScreenShareOptions = false;
+  
   String? _errorMessage;
   String? _reaction;
   int? _speakingUid;
@@ -134,7 +140,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
     if (!isHost && !isCoHost) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Seul l\'hote et les co-hotes peuvent enregistrer'),
+          content: Text(
+              'Seul l\'hote et les co-hotes peuvent enregistrer'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -147,7 +154,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Enregistrement sauvegarde dans Telechargements'),
+            content: Text(
+                'Enregistrement sauvegarde dans Telechargements'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -174,6 +182,24 @@ class _MeetingScreenState extends State<MeetingScreen> {
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _reaction = null);
     });
+  }
+
+  void _toggleWhiteboard() {
+    setState(() {
+      _isWhiteboard = !_isWhiteboard;
+      _showScreenShareOptions = false;
+      if (!_isWhiteboard) _whitboardPoints.clear();
+    });
+  }
+
+  void _startSystemScreenShare() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Partage d\'ecran systeme active'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+    setState(() => _isScreenSharing = true);
   }
 
   Future<void> _endCall() async {
@@ -283,6 +309,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
           ],
         ),
       );
+    }
+
+    if (_isWhiteboard) {
+      return _buildWhiteboard();
     }
 
     return Stack(
@@ -480,6 +510,20 @@ class _MeetingScreenState extends State<MeetingScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildWhiteboard() {
+    return GestureDetector(
+      onPanUpdate: (details) {
+        setState(() {
+          _whitboardPoints.add(details.localPosition);
+        });
+      },
+      child: CustomPaint(
+        painter: WhiteboardPainter(_whitboardPoints),
+        size: Size.infinite,
+      ),
     );
   }
 
@@ -844,11 +888,19 @@ class _MeetingScreenState extends State<MeetingScreen> {
                 ),
                 const SizedBox(width: 8),
                 _controlButton(
-                  icon: Icons.screen_share_outlined,
+                  icon: _showScreenShareOptions
+                      ? Icons.close
+                      : Icons.screen_share,
                   label: 'Partager',
-                  color: Colors.white,
-                  backgroundColor: AppColors.surfaceLight,
-                  onTap: () {},
+                  color: _showScreenShareOptions
+                      ? AppColors.primary
+                      : Colors.white,
+                  backgroundColor: _showScreenShareOptions
+                      ? AppColors.primary.withOpacity(0.2)
+                      : AppColors.surfaceLight,
+                  onTap: () => setState(() =>
+                      _showScreenShareOptions =
+                          !_showScreenShareOptions),
                 ),
                 const SizedBox(width: 8),
                 _controlButton(
@@ -890,6 +942,54 @@ class _MeetingScreenState extends State<MeetingScreen> {
               ],
             ),
           ),
+          if (_showScreenShareOptions) ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _screenShareOption(
+                  icon: Icons.draw,
+                  label: 'Tableau blanc',
+                  onTap: _toggleWhiteboard,
+                ),
+                const SizedBox(width: 16),
+                _screenShareOption(
+                  icon: Icons.phone_android,
+                  label: 'Partage ecran',
+                  onTap: _startSystemScreenShare,
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _screenShareOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon,
+                color: AppColors.primary, size: 24),
+          ),
+          const SizedBox(height: 4),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 10)),
         ],
       ),
     );
@@ -1103,4 +1203,32 @@ class _MeetingScreenState extends State<MeetingScreen> {
       ),
     );
   }
+}
+
+class WhiteboardPainter extends CustomPainter {
+  final List<Offset> points;
+
+  WhiteboardPainter(this.points);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = Colors.white,
+    );
+
+    final paint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    for (int i = 0; i < points.length - 1; i++) {
+      canvas.drawLine(points[i], points[i + 1], paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(WhiteboardPainter oldDelegate) =>
+      oldDelegate.points != points;
 }
