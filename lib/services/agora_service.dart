@@ -9,7 +9,9 @@ class AgoraService {
     final micStatus = await Permission.microphone.request();
     final cameraStatus = await Permission.camera.request();
     
-    if (!micStatus.isGranted || !cameraStatus.isGranted) {
+    print('Mic: ${micStatus.isDenied}, Camera: ${cameraStatus.isDenied}');
+    
+    if (micStatus.isDenied || cameraStatus.isDenied) {
       throw Exception('Permissions refusees');
     }
 
@@ -21,28 +23,23 @@ class AgoraService {
     ));
 
     await _engine!.enableAudio();
-    await _engine!.setAudioProfile(
-      profile: AudioProfileType.audioProfileDefault,
-      scenario: AudioScenarioType.audioScenarioChatroom,
-    );
-
     await _engine!.enableVideo();
-    
     await _engine!.setVideoEncoderConfiguration(
       const VideoEncoderConfiguration(
         dimensions: VideoDimensions(width: 640, height: 480),
         frameRate: 15,
         bitrate: 800,
-        degradationPreference:
-            DegradationPreference.maintainFramerate,
       ),
     );
 
     await _engine!.setClientRole(
-      role: ClientRoleType.clientRoleBroadcaster,
-    );
-
+        role: ClientRoleType.clientRoleBroadcaster);
+    
+    await Future.delayed(const Duration(milliseconds: 500));
+    
     await _engine!.startPreview();
+    
+    print('Agora initialized successfully');
   }
 
   Future<void> joinChannel(String channelName,
