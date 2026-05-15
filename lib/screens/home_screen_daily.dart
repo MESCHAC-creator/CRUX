@@ -18,8 +18,7 @@ class HomeScreenDaily extends StatefulWidget {
   State<HomeScreenDaily> createState() => _HomeScreenDailyState();
 }
 
-class _HomeScreenDailyState extends State<HomeScreenDaily>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenDailyState extends State<HomeScreenDaily> {
   bool _permissionsGranted = false;
   bool _checkingPermissions = true;
   String _selectedMode = 'standard';
@@ -137,8 +136,8 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
         final meeting = MeetingModel(
           id: roomCode,
           title: 'Reunion $roomCode',
-          hostId: user.uid,
-          hostName: user.name,
+          hostId: widget.user.uid,
+          hostName: widget.user.name,
           createdAt: DateTime.now(),
           mode: _selectedMode,
         );
@@ -294,8 +293,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
                 MaterialPageRoute(
                   builder: (context) => MeetingScreenDaily(
                     meeting: meeting,
-                    user: user,
-                    roomUrl: roomUrl,
+                    user: widget.user,
                   ),
                 ),
               );
@@ -422,8 +420,8 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
         final meeting = MeetingModel(
           id: code,
           title: 'Reunion $code',
-          hostId: user.uid,
-          hostName: user.name,
+          hostId: widget.user.uid,
+          hostName: widget.user.name,
           createdAt: DateTime.now(),
         );
 
@@ -433,8 +431,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
             MaterialPageRoute(
               builder: (context) => MeetingScreenDaily(
                 meeting: meeting,
-                user: user,
-                roomUrl: roomUrl,
+                user: widget.user,
               ),
             ),
           );
@@ -501,7 +498,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
                     fontSize: 20,
                     letterSpacing: 4)),
             Text(
-              'Bienvenue, ${user.name}',
+              'Bienvenue, ${widget.user.name}',
               style: const TextStyle(
                   color: Colors.white60, fontSize: 12),
             ),
