@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../utils/colors.dart';
 import '../models/user_model.dart';
@@ -7,19 +6,19 @@ import '../models/meeting_model.dart';
 import '../services/meeting_service.dart';
 import '../services/permission_service.dart';
 import '../widgets/custom_button.dart';
-import 'meeting_screen.dart';
+import 'meeting_screen_daily.dart';
 import 'settings_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreenDaily extends StatefulWidget {
   final UserModel user;
 
-  const HomeScreen({super.key, required this.user});
+  const HomeScreenDaily({super.key, required this.user});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreenDaily> createState() => _HomeScreenDailyState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
+class _HomeScreenDailyState extends State<HomeScreenDaily>
     with SingleTickerProviderStateMixin {
   final MeetingService _meetingService = MeetingService();
   late TabController _tabController;
@@ -182,8 +181,6 @@ class _HomeScreenState extends State<HomeScreen>
     );
 
     try {
-      print('⏳ Creating meeting: $title (timeout: 15s)');
-      
       final meeting = await _meetingService
           .createMeeting(
             title,
@@ -192,15 +189,13 @@ class _HomeScreenState extends State<HomeScreen>
             mode: _selectedMode,
           )
           .timeout(
-            const Duration(seconds: 15),
+            const Duration(seconds: 10),
             onTimeout: () {
-              print('⏱️ Meeting creation timeout - returning local meeting');
               return MeetingModel(
-                id: 'TEMP${DateTime.now().millisecondsSinceEpoch}',
+                id: 'ROOM${DateTime.now().millisecondsSinceEpoch}',
                 title: title,
                 hostId: widget.user.uid,
                 hostName: widget.user.name,
-                coHosts: [],
                 createdAt: DateTime.now(),
                 mode: _selectedMode,
               );
@@ -210,12 +205,11 @@ class _HomeScreenState extends State<HomeScreen>
       if (mounted) Navigator.pop(context);
 
       if (meeting != null) {
-        print('✅ Meeting created/local: ${meeting.id}');
         if (mounted) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => MeetingScreen(
+              builder: (context) => MeetingScreenDaily(
                 meeting: meeting,
                 user: widget.user,
               ),
@@ -224,7 +218,6 @@ class _HomeScreenState extends State<HomeScreen>
         }
       }
     } catch (e) {
-      print('❌ Error creating meeting: $e');
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -544,7 +537,7 @@ class _HomeScreenState extends State<HomeScreen>
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => MeetingScreen(
+              builder: (context) => MeetingScreenDaily(
                 meeting: meeting,
                 user: widget.user,
               ),
@@ -890,7 +883,7 @@ class _HomeScreenState extends State<HomeScreen>
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          MeetingScreen(
+                                          MeetingScreenDaily(
                                         meeting: meeting,
                                         user: widget.user,
                                       ),
