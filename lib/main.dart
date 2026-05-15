@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'CRUX',
       theme: AppTheme.darkTheme,
-      home: const SplashScreen(),
+      home: const AuthWrapper(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -45,20 +45,18 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<UserModel?>(
       stream: AuthService.authStateChanges(),
       builder: (context, snapshot) {
+        // Vérification de la connexion
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Colors.black,
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+          return const SplashScreen();
         }
 
+        // Utilisateur connecté
         if (snapshot.hasData && snapshot.data != null) {
           final user = snapshot.data!;
           return HomeScreenDaily(user: user);
         }
 
+        // Utilisateur non connecté
         return const LoginScreen();
       },
     );
