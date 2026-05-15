@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../utils/colors.dart';
 import '../models/user_model.dart';
 import '../models/meeting_model.dart';
@@ -19,7 +20,6 @@ class HomeScreenDaily extends StatefulWidget {
 
 class _HomeScreenDailyState extends State<HomeScreenDaily>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
   bool _permissionsGranted = false;
   bool _checkingPermissions = true;
   String _selectedMode = 'standard';
@@ -54,7 +54,6 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _requestPermissionsAtStartup();
   }
 
@@ -129,7 +128,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
       final roomUrl =
           await DailyApiService.createRoom(roomCode);
 
-      if (mounted) Navigator.pop(context); // Ferme le dialog
+      if (mounted) Navigator.pop(context); // Ferme le loading dialog
 
       if (roomUrl != null) {
         print('✅ Room created: $roomUrl');
@@ -145,16 +144,8 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
         );
 
         if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MeetingScreenDaily(
-                meeting: meeting,
-                user: user,
-                roomUrl: roomUrl,
-              ),
-            ),
-          );
+          // AFFICHER LE CODE ET DEMANDER SI ON VEUT REJOINDRE
+          _showMeetingCodeDialog(roomCode, meeting, roomUrl);
         }
       } else {
         if (mounted) {
@@ -178,6 +169,144 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
         );
       }
     }
+  }
+
+  void _showMeetingCodeDialog(
+    String code,
+    MeetingModel meeting,
+    String roomUrl,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Reunion Creee !',
+          style: TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Partagez ce CODE avec vos participants :',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // LE CODE EN GRAND ET BIEN VISIBLE
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.primary,
+                  width: 2,
+                ),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'CODE',
+                    style: TextStyle(
+                      color: AppColors.grey,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    code,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // BOUTON COPIER LE CODE
+            GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: code));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Code copie: $code'),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.copy,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Copier le code',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Fermer',
+              style: TextStyle(color: AppColors.grey),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Rejoindre la reunion
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MeetingScreenDaily(
+                    meeting: meeting,
+                    user: user,
+                    roomUrl: roomUrl,
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary),
+            child: const Text('Rejoindre'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _joinMeetingWithCode() async {
@@ -332,12 +461,6 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
         );
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   @override
@@ -497,19 +620,58 @@ class _HomeScreenDailyState extends State<HomeScreenDaily>
                   },
                 ),
                 const SizedBox(height: 32),
-                CustomButton(
-                  text: 'NOUVELLE REUNION',
+                ElevatedButton(
                   onPressed: _createNewMeeting,
-                  color: AppColors.primary,
-                  icon: Icons.add,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add),
+                      SizedBox(width: 8),
+                      Text(
+                        'NOUVELLE REUNION',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
-                CustomButton(
-                  text: 'REJOINDRE REUNION',
+                ElevatedButton(
                   onPressed: _joinMeetingWithCode,
-                  color: AppColors.surfaceLight,
-                  textColor: Colors.white,
-                  icon: Icons.login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.surfaceLight,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.login,
+                          color: Colors.white),
+                      SizedBox(width: 8),
+                      Text(
+                        'REJOINDRE REUNION',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
