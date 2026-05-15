@@ -26,7 +26,6 @@ class _HomeScreenState extends State<HomeScreen>
   bool _permissionsGranted = false;
   bool _checkingPermissions = true;
   String _selectedMode = 'standard';
-  String? _errorMessage;
 
   final List<Map<String, dynamic>> _modes = [
     {
@@ -499,14 +498,14 @@ class _HomeScreenState extends State<HomeScreen>
                     CustomButton(
                       text: 'NOUVELLE REUNION',
                       onPressed: _createMeeting,
-                      backgroundColor: AppColors.primary,
+                      color: AppColors.primary,
                       icon: Icons.add,
                     ),
                     const SizedBox(height: 12),
                     CustomButton(
                       text: 'REJOINDRE REUNION',
                       onPressed: _joinMeeting,
-                      backgroundColor: AppColors.surfaceLight,
+                      color: AppColors.surfaceLight,
                       textColor: Colors.white,
                       icon: Icons.login,
                     ),
@@ -628,7 +627,7 @@ class _HomeScreenState extends State<HomeScreen>
                                     ),
                                   );
                                 },
-                                backgroundColor:
+                                color:
                                     AppColors.primary,
                                 height: 40,
                               ),
