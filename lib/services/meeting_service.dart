@@ -33,35 +33,19 @@ class MeetingService {
       waitingRoom: waitingRoom,
     );
 
-    for (int attempt = 1; attempt <= 5; attempt++) {
-      try {
-        await _firestore
-            .collection('meetings')
-            .doc(id)
-            .set(meeting.toMap(), SetOptions(merge: true))
-            .timeout(const Duration(seconds: 20));
-
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        DocumentSnapshot verify = await _firestore
-            .collection('meetings')
-            .doc(id)
-            .get()
-            .timeout(const Duration(seconds: 15));
-
-        if (verify.exists) {
-          return meeting;
-        }
-      } catch (e) {
-        print('Tentative $attempt échouée: $e');
-        if (attempt < 5) {
-          await Future.delayed(
-              Duration(seconds: attempt * 2));
-        }
-      }
+    try {
+      await _firestore
+          .collection('meetings')
+          .doc(id)
+          .set(meeting.toMap(), SetOptions(merge: true))
+          .timeout(const Duration(seconds: 10));
+      
+      print('Meeting created: $id');
+      return meeting;
+    } catch (e) {
+      print('Error creating meeting: $e');
+      return meeting;
     }
-
-    return meeting;
   }
 
   Future<MeetingModel?> scheduleMeeting(
@@ -89,47 +73,30 @@ class MeetingService {
       waitingRoom: waitingRoom,
     );
 
-    for (int attempt = 1; attempt <= 5; attempt++) {
-      try {
-        await _firestore
-            .collection('meetings')
-            .doc(id)
-            .set(meeting.toMap(), SetOptions(merge: true))
-            .timeout(const Duration(seconds: 20));
-
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        DocumentSnapshot verify = await _firestore
-            .collection('meetings')
-            .doc(id)
-            .get()
-            .timeout(const Duration(seconds: 15));
-
-        if (verify.exists) {
-          return meeting;
-        }
-      } catch (e) {
-        print('Tentative $attempt échouée: $e');
-        if (attempt < 5) {
-          await Future.delayed(
-              Duration(seconds: attempt * 2));
-        }
-      }
+    try {
+      await _firestore
+          .collection('meetings')
+          .doc(id)
+          .set(meeting.toMap(), SetOptions(merge: true))
+          .timeout(const Duration(seconds: 10));
+      
+      print('Meeting scheduled: $id');
+      return meeting;
+    } catch (e) {
+      print('Error scheduling meeting: $e');
+      return meeting;
     }
-
-    return meeting;
   }
 
-  Future<List<MeetingModel>> getScheduledMeetings(
-      String hostId) async {
+  Future<List<MeetingModel>> getScheduledMeetings(String hostId) async {
     try {
       QuerySnapshot snapshot = await _firestore
           .collection('meetings')
           .where('hostId', isEqualTo: hostId)
           .where('isScheduled', isEqualTo: true)
           .get()
-          .timeout(const Duration(seconds: 20));
-
+          .timeout(const Duration(seconds: 10));
+      
       return snapshot.docs
           .map((doc) => MeetingModel.fromMap(
               doc.data() as Map<String, dynamic>))
@@ -138,35 +105,28 @@ class MeetingService {
             (a.scheduledAt ?? DateTime.now())
                 .compareTo(b.scheduledAt ?? DateTime.now()));
     } catch (e) {
-      print('Erreur getScheduledMeetings: $e');
+      print('Error getting scheduled meetings: $e');
       return [];
     }
   }
 
   Future<MeetingModel?> joinMeeting(String code) async {
-    for (int attempt = 1; attempt <= 5; attempt++) {
-      try {
-        DocumentSnapshot doc = await _firestore
-            .collection('meetings')
-            .doc(code.toUpperCase())
-            .get()
-            .timeout(const Duration(seconds: 20));
+    try {
+      DocumentSnapshot doc = await _firestore
+          .collection('meetings')
+          .doc(code.toUpperCase())
+          .get()
+          .timeout(const Duration(seconds: 10));
 
-        if (doc.exists) {
-          return MeetingModel.fromMap(
-              doc.data() as Map<String, dynamic>);
-        } else {
-          return null;
-        }
-      } catch (e) {
-        print('Tentative $attempt joinMeeting échouée: $e');
-        if (attempt < 5) {
-          await Future.delayed(
-              Duration(seconds: attempt * 2));
-        }
+      if (doc.exists) {
+        return MeetingModel.fromMap(
+            doc.data() as Map<String, dynamic>);
       }
+      return null;
+    } catch (e) {
+      print('Error joining meeting: $e');
+      return null;
     }
-    return null;
   }
 
   Future<void> endMeeting(String meetingId) async {
@@ -175,9 +135,9 @@ class MeetingService {
           .collection('meetings')
           .doc(meetingId)
           .update({'isActive': false})
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 10));
     } catch (e) {
-      print('Erreur endMeeting: $e');
+      print('Error ending meeting: $e');
     }
   }
 }
