@@ -29,9 +29,17 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   Locale _locale = const Locale('fr');
+  late SharedPreferences _prefs;
 
   void setLocale(Locale locale) {
-    setState(() => _locale = locale);
+    setState(() {
+      _locale = locale;
+    });
+    _saveLocale(locale.languageCode);
+  }
+
+  Future<void> _saveLocale(String languageCode) async {
+    await _prefs.setString('language', languageCode);
   }
 
   @override
@@ -41,9 +49,11 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _loadLocale() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lang = prefs.getString('language') ?? 'fr';
-    setState(() => _locale = Locale(lang));
+    _prefs = await SharedPreferences.getInstance();
+    final lang = _prefs.getString('language') ?? 'fr';
+    setState(() {
+      _locale = Locale(lang);
+    });
   }
 
   @override
