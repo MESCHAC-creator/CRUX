@@ -3,10 +3,10 @@ class MeetingModel {
   final String title;
   final String hostId;
   final String hostName;
-  final List<String> coHosts;
+  final List<String>? coHosts;
   final DateTime createdAt;
   final DateTime? scheduledAt;
-  final String mode;
+  final String? mode;
   final bool isActive;
 
   MeetingModel({
@@ -14,21 +14,21 @@ class MeetingModel {
     required this.title,
     required this.hostId,
     required this.hostName,
-    this.coHosts = const [],
+    this.coHosts,
     required this.createdAt,
     this.scheduledAt,
     this.mode = 'standard',
     this.isActive = true,
   });
 
-  // Convertir en Map pour Firebase
+  // Convertir en Map pour Firestore
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
       'hostId': hostId,
       'hostName': hostName,
-      'coHosts': coHosts,
+      'coHosts': coHosts ?? [],
       'createdAt': createdAt,
       'scheduledAt': scheduledAt,
       'mode': mode,
@@ -36,7 +36,7 @@ class MeetingModel {
     };
   }
 
-  // Créer depuis Firebase
+  // Créer depuis Firestore
   factory MeetingModel.fromMap(Map<String, dynamic> map) {
     return MeetingModel(
       id: map['id'] ?? '',
@@ -44,8 +44,12 @@ class MeetingModel {
       hostId: map['hostId'] ?? '',
       hostName: map['hostName'] ?? '',
       coHosts: List<String>.from(map['coHosts'] ?? []),
-      createdAt: map['createdAt']?.toDate() ?? DateTime.now(),
-      scheduledAt: map['scheduledAt']?.toDate(),
+      createdAt: map['createdAt'] is DateTime
+          ? map['createdAt']
+          : DateTime.now(),
+      scheduledAt: map['scheduledAt'] is DateTime
+          ? map['scheduledAt']
+          : null,
       mode: map['mode'] ?? 'standard',
       isActive: map['isActive'] ?? true,
     );
@@ -75,4 +79,8 @@ class MeetingModel {
       isActive: isActive ?? this.isActive,
     );
   }
+
+  @override
+  String toString() =>
+      'MeetingModel(id: $id, title: $title, hostName: $hostName)';
 }
