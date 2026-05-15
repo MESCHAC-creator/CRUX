@@ -8,43 +8,45 @@ class AgoraService {
 
   Future<void> initialize() async {
     try {
-      print('=== AGORA INITIALIZATION START ===');
+      print('=== INITIALIZING AGORA ===');
       
-      // 1. REQUEST PERMISSIONS FIRST
+      // 1. REQUEST PERMISSIONS - MUST SUCCEED
+      print('Step 1: Requesting permissions...');
       final micStatus = await Permission.microphone.request();
       final cameraStatus = await Permission.camera.request();
       
-      print('🎤 Microphone: $micStatus');
-      print('📹 Camera: $cameraStatus');
+      print('Microphone: $micStatus');
+      print('Camera: $cameraStatus');
       
       if (micStatus.isDenied || cameraStatus.isDenied) {
-        throw Exception('Permissions denied - Mic: $micStatus, Camera: $cameraStatus');
+        throw Exception('PERMISSIONS DENIED - Mic: $micStatus, Camera: $cameraStatus');
       }
 
       // 2. CREATE ENGINE
-      print('📱 Creating Agora RTC Engine...');
+      print('Step 2: Creating RTC Engine...');
       _engine = createAgoraRtcEngine();
-      
-      // 3. INITIALIZE ENGINE WITH CORRECT APP ID
-      print('🔧 Initializing engine with App ID...');
+
+      // 3. INITIALIZE WITH APP ID
+      print('Step 3: Initializing with App ID...');
       await _engine!.initialize(const RtcEngineContext(
         appId: '729bb936e5084d53897e43c58ee8e946',
         channelProfile: ChannelProfileType.channelProfileCommunication,
       ));
-      print('✅ Engine initialized');
 
-      // 4. ENABLE AUDIO
-      print('🎤 Enabling audio...');
+      // 4. REGISTER EVENT HANDLER BEFORE ANYTHING ELSE
+      print('Step 4: Registering event handler...');
+      _registerEventHandler();
+
+      // 5. ENABLE AUDIO
+      print('Step 5: Enabling audio...');
       await _engine!.enableAudio();
-      print('✅ Audio enabled');
-      
-      // 5. ENABLE VIDEO
-      print('📹 Enabling video...');
-      await _engine!.enableVideo();
-      print('✅ Video enabled');
 
-      // 6. SET VIDEO CONFIGURATION
-      print('⚙️ Setting video configuration...');
+      // 6. ENABLE VIDEO
+      print('Step 6: Enabling video...');
+      await _engine!.enableVideo();
+
+      // 7. SET VIDEO CONFIG
+      print('Step 7: Setting video configuration...');
       await _engine!.setVideoEncoderConfiguration(
         const VideoEncoderConfiguration(
           dimensions: VideoDimensions(width: 640, height: 480),
@@ -52,45 +54,64 @@ class AgoraService {
           bitrate: 800,
         ),
       );
-      print('✅ Video configuration set');
 
-      // 7. SET CLIENT ROLE
-      print('👤 Setting client role to BROADCASTER...');
+      // 8. SET CLIENT ROLE BEFORE PREVIEW
+      print('Step 8: Setting client role...');
       await _engine!.setClientRole(
         role: ClientRoleType.clientRoleBroadcaster,
       );
-      print('✅ Client role set to BROADCASTER');
-      
-      // 8. SMALL DELAY TO ENSURE EVERYTHING IS READY
-      print('⏳ Waiting for engine to be ready...');
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // 9. START PREVIEW (THIS SHOWS LOCAL CAMERA)
-      print('🎥 Starting camera preview...');
+
+      // 9. LONGER DELAY - CRITICAL!
+      print('Step 9: Waiting 1 second for engine stability...');
+      await Future.delayed(const Duration(seconds: 1));
+
+      // 10. START PREVIEW - LAST STEP
+      print('Step 10: Starting preview...');
       await _engine!.startPreview();
-      print('✅ CAMERA PREVIEW STARTED - VIDEO SHOULD APPEAR NOW!');
-      
-      print('=== AGORA INITIALIZATION COMPLETE ===');
-      
+
+      print('=== AGORA INITIALIZED SUCCESSFULLY ===');
+      print('Camera should be visible now!');
+
     } catch (e) {
-      print('❌ INITIALIZATION ERROR: $e');
+      print('ERROR DURING INITIALIZATION: $e');
       rethrow;
     }
   }
 
+  void _registerEventHandler() {
+    _engine!.registerEventHandler(RtcEngineEventHandler(
+      onJoinChannelSuccess: (connection, elapsed) {
+        print('✅ Joined channel: ${connection.channelId}');
+        print('   Local UID: ${connection.localUid}');
+        _localUid = connection.localUid;
+      },
+      
+      onUserJoined: (connection, uid, elapsed) {
+        print('User joined: $uid');
+      },
+      
+      onUserOffline: (connection, uid, reason) {
+        print('User offline: $uid');
+      },
+      
+      onError: (err, msg) {
+        print('ERROR: $err - $msg');
+      },
+      
+      onConnectionStateChanged: (connection, state, reason) {
+        print('Connection state: $state, reason: $reason');
+      },
+    ));
+  }
+
   Future<void> joinChannel(String channelName, {String? token}) async {
     try {
-      print('\n=== JOINING CHANNEL: $channelName ===');
+      print('\nJOINING CHANNEL: $channelName');
       
       if (_engine == null) {
-        throw Exception('Engine not initialized! Call initialize() first');
+        throw Exception('Engine not initialized');
       }
 
-      print('🔗 Calling joinChannel with:');
-      print('   - channelId: $channelName');
-      print('   - uid: 0 (auto-assign)');
-      print('   - token: ${token?.isEmpty ?? true ? "empty" : "provided"}');
-      
       await _engine!.joinChannel(
         token: token ?? '',
         channelId: channelName,
@@ -106,18 +127,16 @@ class AgoraService {
         ),
       );
       
-      print('✅ Join channel request sent successfully');
-      print('=== WAITING FOR onJoinChannelSuccess CALLBACK ===\n');
+      print('✅ Join request sent');
       
     } catch (e) {
-      print('❌ JOIN CHANNEL ERROR: $e');
+      print('ERROR: $e');
       rethrow;
     }
   }
 
   Future<void> enableLowBandwidthMode() async {
     try {
-      print('🌐 Enabling LOW BANDWIDTH mode...');
       await _engine!.setVideoEncoderConfiguration(
         const VideoEncoderConfiguration(
           dimensions: VideoDimensions(width: 320, height: 240),
@@ -125,15 +144,14 @@ class AgoraService {
           bitrate: 200,
         ),
       );
-      print('✅ Low bandwidth mode enabled');
+      print('Low bandwidth enabled');
     } catch (e) {
-      print('❌ Error enabling low bandwidth: $e');
+      print('Error: $e');
     }
   }
 
   Future<void> disableLowBandwidthMode() async {
     try {
-      print('🌐 Disabling LOW BANDWIDTH mode (returning to normal)...');
       await _engine!.setVideoEncoderConfiguration(
         const VideoEncoderConfiguration(
           dimensions: VideoDimensions(width: 640, height: 480),
@@ -141,73 +159,66 @@ class AgoraService {
           bitrate: 800,
         ),
       );
-      print('✅ Normal mode enabled');
+      print('Normal mode enabled');
     } catch (e) {
-      print('❌ Error disabling low bandwidth: $e');
+      print('Error: $e');
     }
   }
 
   Future<void> leaveChannel() async {
     try {
-      print('\n=== LEAVING CHANNEL ===');
       await _engine!.stopPreview();
       await _engine!.leaveChannel();
-      print('✅ Left channel successfully');
+      print('Left channel');
     } catch (e) {
-      print('❌ Error leaving channel: $e');
+      print('Error: $e');
     }
   }
 
   Future<void> muteLocalAudio(bool mute) async {
     try {
       await _engine!.muteLocalAudioStream(mute);
-      print('🎤 Local audio muted: $mute');
     } catch (e) {
-      print('❌ Error muting audio: $e');
+      print('Error: $e');
     }
   }
 
   Future<void> muteLocalVideo(bool mute) async {
     try {
       await _engine!.muteLocalVideoStream(mute);
-      print('📹 Local video muted: $mute');
     } catch (e) {
-      print('❌ Error muting video: $e');
+      print('Error: $e');
     }
   }
 
   Future<void> muteRemoteAudio(int uid, bool mute) async {
     try {
       await _engine!.muteRemoteAudioStream(uid: uid, mute: mute);
-      print('🎤 Remote audio muted (uid: $uid): $mute');
     } catch (e) {
-      print('❌ Error muting remote audio: $e');
+      print('Error: $e');
     }
   }
 
   Future<void> muteRemoteVideo(int uid, bool mute) async {
     try {
       await _engine!.muteRemoteVideoStream(uid: uid, mute: mute);
-      print('📹 Remote video muted (uid: $uid): $mute');
     } catch (e) {
-      print('❌ Error muting remote video: $e');
+      print('Error: $e');
     }
   }
 
   Future<bool> startRecording() async {
     try {
-      print('\n=== STARTING AUDIO RECORDING ===');
       await _engine!.startAudioRecording(
         const AudioRecordingConfiguration(
           filePath: '/sdcard/Download/crux_recording.aac',
         ),
       );
       _isRecording = true;
-      print('✅ Audio recording started');
-      print('   Path: /sdcard/Download/crux_recording.aac');
+      print('Recording started');
       return true;
     } catch (e) {
-      print('❌ Error starting recording: $e');
+      print('Error: $e');
       _isRecording = false;
       return false;
     }
@@ -215,12 +226,10 @@ class AgoraService {
 
   Future<void> stopRecording() async {
     try {
-      print('\n=== STOPPING AUDIO RECORDING ===');
       await _engine!.stopAudioRecording();
-      print('✅ Audio recording stopped');
-      print('   Saved to: /sdcard/Download/crux_recording.aac');
+      print('Recording stopped');
     } catch (e) {
-      print('❌ Error stopping recording: $e');
+      print('Error: $e');
     }
     _isRecording = false;
   }
@@ -233,65 +242,48 @@ class AgoraService {
   }) {
     _engine!.registerEventHandler(RtcEngineEventHandler(
       onJoinChannelSuccess: (connection, elapsed) {
-        print('\n✅✅✅ onJoinChannelSuccess ✅✅✅');
-        print('   Channel: ${connection.channelId}');
-        print('   Local UID: ${connection.localUid}');
-        print('   Elapsed: ${elapsed}ms');
+        print('✅ JOIN SUCCESS: ${connection.channelId}');
         _localUid = connection.localUid;
         onJoinSuccess?.call();
       },
       
       onUserJoined: (connection, uid, elapsed) {
-        print('\n👤 onUserJoined');
-        print('   Remote UID: $uid');
-        print('   Elapsed: ${elapsed}ms');
+        print('User joined: $uid');
         onUserJoined?.call(uid);
       },
       
       onUserOffline: (connection, uid, reason) {
-        print('\n👤 onUserOffline');
-        print('   Remote UID: $uid');
-        print('   Reason: $reason');
+        print('User offline: $uid');
         onUserOffline?.call(uid);
       },
       
       onAudioVolumeIndication: (connection, speakers, speakerNumber, totalVolume) {
         for (final speaker in speakers) {
           if ((speaker.volume ?? 0) > 50) {
-            print('🔊 User speaking: uid=${speaker.uid}, volume=${speaker.volume}');
             onUserSpeaking?.call(speaker.uid ?? 0, speaker.volume ?? 0);
           }
         }
       },
       
       onError: (err, msg) {
-        print('❌ Agora ERROR: $err - $msg');
+        print('ERROR: $err - $msg');
       },
       
       onConnectionStateChanged: (connection, state, reason) {
-        print('🔄 Connection state changed: $state (reason: $reason)');
-      },
-      
-      onRemoteVideoStateChanged: (connection, remoteUid, state, reason, elapsed) {
-        print('📹 Remote video state: uid=$remoteUid, state=$state, reason=$reason');
-      },
-      
-      onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) {
-        print('🎤 Remote audio state: uid=$remoteUid, state=$state, reason=$reason');
+        print('Connection: $state');
       },
     ));
   }
 
   Future<void> dispose() async {
     try {
-      print('\n=== DISPOSING AGORA ===');
       if (_isRecording) await stopRecording();
       await _engine?.stopPreview();
       await _engine?.leaveChannel();
       await _engine?.release();
-      print('✅ Agora disposed successfully');
+      print('Disposed');
     } catch (e) {
-      print('❌ Error disposing: $e');
+      print('Error: $e');
     }
     _engine = null;
     _localUid = null;
