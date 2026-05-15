@@ -29,8 +29,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _changeLanguage(String lang) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', lang);
+    
     setState(() => _selectedLanguage = lang);
+    
     MyApp.of(context)?.setLocale(Locale(lang));
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(lang == 'fr' ? 'Francais' : 'English'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: AppColors.success,
+      ),
+    );
   }
 
   @override
