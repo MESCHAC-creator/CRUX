@@ -28,7 +28,7 @@ class AgoraService {
       // 3. INITIALIZE ENGINE
       print('🔧 Initializing engine with App ID...');
       await _engine!.initialize(const RtcEngineContext(
-        appId: '3ed3eb7e29c245df8fcd7eb10a346a3d',
+        appId: '729bb936e5084d53897e43c58ee8e946',
         channelProfile: ChannelProfileType.channelProfileCommunication,
       ));
       print('✅ Engine initialized');
