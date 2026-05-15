@@ -4,7 +4,6 @@ import '../utils/colors.dart';
 import '../models/user_model.dart';
 import '../models/meeting_model.dart';
 import '../services/permission_service.dart';
-import '../services/daily_api_service.dart';
 import '../widgets/custom_button.dart';
 import 'meeting_screen_daily.dart';
 import 'settings_screen.dart';
@@ -86,7 +85,9 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
     }
   }
 
-  Future<void> _createNewMeeting() async {
+  void _createMeetingManually() {
+    final codeController = TextEditingController();
+
     if (!_permissionsGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -97,84 +98,71 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
       return;
     }
 
-    // Afficher le loading dialog
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: const Text('Creer Une Reunion',
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(
-                color: AppColors.primary),
-            const SizedBox(height: 16),
             const Text(
-              'Creation de la reunion...',
+              'Entrez un CODE pour votre reunion (ex: REUNION-1)',
               style: TextStyle(
-                  color: Colors.white, fontSize: 14),
+                color: AppColors.grey,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: codeController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Ex: REUNION-JANVIER',
+                hintStyle: const TextStyle(color: AppColors.grey),
+                filled: true,
+                fillColor: AppColors.surfaceLight,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              textCapitalization: TextCapitalization.characters,
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler',
+                style: TextStyle(color: AppColors.primary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (codeController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Entrez un code'),
+                      backgroundColor: AppColors.danger),
+                );
+                return;
+              }
+
+              Navigator.pop(context);
+              _showCodeDialog(codeController.text.trim());
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary),
+            child: const Text('Creer'),
+          ),
+        ],
       ),
     );
-
-    try {
-      // Générer un code unique
-      final roomCode = DailyApiService.generateRoomName();
-      print('⏳ Creating meeting with code: $roomCode');
-
-      // Créer la room sur Daily.co
-      final roomUrl =
-          await DailyApiService.createRoom(roomCode);
-
-      if (mounted) Navigator.pop(context); // Ferme le loading dialog
-
-      if (roomUrl != null) {
-        print('✅ Room created: $roomUrl');
-
-        // Créer l'objet meeting
-        final meeting = MeetingModel(
-          id: roomCode,
-          title: 'Reunion $roomCode',
-          hostId: widget.user.uid,
-          hostName: widget.user.name,
-          createdAt: DateTime.now(),
-          mode: _selectedMode,
-        );
-
-        if (mounted) {
-          // AFFICHER LE CODE ET DEMANDER SI ON VEUT REJOINDRE
-          _showMeetingCodeDialog(roomCode, meeting, roomUrl);
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erreur: Impossible de créer la reunion'),
-              backgroundColor: AppColors.danger,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      print('❌ Error: $e');
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
   }
 
-  void _showMeetingCodeDialog(
-    String code,
-    MeetingModel meeting,
-    String roomUrl,
-  ) {
+  void _showCodeDialog(String code) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -201,7 +189,6 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
               ),
             ),
             const SizedBox(height: 20),
-            // LE CODE EN GRAND ET BIEN VISIBLE
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -236,7 +223,6 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
               ),
             ),
             const SizedBox(height: 16),
-            // BOUTON COPIER LE CODE
             GestureDetector(
               onTap: () {
                 Clipboard.setData(ClipboardData(text: code));
@@ -287,16 +273,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // Rejoindre la reunion
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MeetingScreenDaily(
-                    meeting: meeting,
-                    user: widget.user,
-                  ),
-                ),
-              );
+              _joinMeeting(code);
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary),
@@ -344,7 +321,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
               controller: codeController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Ex: ROOM-5789',
+                hintText: 'Ex: REUNION-JANVIER',
                 hintStyle: const TextStyle(color: AppColors.grey),
                 filled: true,
                 fillColor: AppColors.surfaceLight,
@@ -362,7 +339,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
                 style: TextStyle(color: AppColors.primary)),
           ),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               if (codeController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -373,7 +350,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
               }
 
               Navigator.pop(context);
-              _joinMeetingProcess(codeController.text.trim());
+              _joinMeeting(codeController.text.trim());
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary),
@@ -384,80 +361,26 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
     );
   }
 
-  Future<void> _joinMeetingProcess(String code) async {
-    // Afficher le loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-                color: AppColors.primary),
-            const SizedBox(height: 16),
-            const Text(
-              'Connexion a la reunion...',
-              style: TextStyle(
-                  color: Colors.white, fontSize: 14),
-            ),
-          ],
+  void _joinMeeting(String code) {
+    final meeting = MeetingModel(
+      id: code,
+      title: 'Reunion $code',
+      hostId: widget.user.uid,
+      hostName: widget.user.name,
+      createdAt: DateTime.now(),
+    );
+
+    print('🔗 Joining meeting: $code');
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MeetingScreenDaily(
+          meeting: meeting,
+          user: widget.user,
         ),
       ),
     );
-
-    try {
-      print('🔗 Joining meeting with code: $code');
-
-      // Obtenir ou créer la room
-      final roomUrl = await DailyApiService.getRoom(code);
-
-      if (mounted) Navigator.pop(context); // Ferme le dialog
-
-      if (roomUrl != null) {
-        print('✅ Room URL: $roomUrl');
-
-        final meeting = MeetingModel(
-          id: code,
-          title: 'Reunion $code',
-          hostId: widget.user.uid,
-          hostName: widget.user.name,
-          createdAt: DateTime.now(),
-        );
-
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MeetingScreenDaily(
-                meeting: meeting,
-                user: widget.user,
-              ),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Reunion non trouvee ou erreur'),
-              backgroundColor: AppColors.danger,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      print('❌ Error: $e');
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
   }
 
   @override
@@ -618,7 +541,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
-                  onPressed: _createNewMeeting,
+                  onPressed: _createMeetingManually,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(
