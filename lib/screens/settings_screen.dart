@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/colors.dart';
-import '../main.dart';
+import '../services/auth_service.dart';
+import '../screens/login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -12,36 +12,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _selectedLanguage = 'fr';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLanguage();
-  }
-
-  Future<void> _loadLanguage() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _selectedLanguage = prefs.getString('language') ?? 'fr';
-    });
-  }
-
-  Future<void> _changeLanguage(String lang) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', lang);
-    
-    setState(() => _selectedLanguage = lang);
-    
-    MyApp.of(context)?.setLocale(Locale(lang));
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(lang == 'fr' ? 'Francais' : 'English'),
-        duration: const Duration(seconds: 1),
-        backgroundColor: AppColors.success,
-      ),
-    );
-  }
+  bool _notificationsEnabled = true;
+  bool _darkModeEnabled = true;
 
   @override
   Widget build(BuildContext context) {
@@ -49,113 +21,311 @@ class _SettingsScreenState extends State<SettingsScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        title: const Text('Parametres',
-            style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
+        title: const Text(
+          'Parametres',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('LANGUE',
-                style: TextStyle(
-                    color: AppColors.grey,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5)),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: Column(
-                children: [
-                  _languageTile(
-                      flag: '🇫🇷',
-                      language: 'Francais',
-                      code: 'fr'),
-                  const Divider(
-                      color: Colors.white10, height: 1),
-                  _languageTile(
-                      flag: '🇬🇧',
-                      language: 'English',
-                      code: 'en'),
-                ],
-              ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Section Langue
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
             ),
-            const SizedBox(height: 32),
-            const Text('A PROPOS',
-                style: TextStyle(
-                    color: AppColors.grey,
-                    fontSize: 11,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Langue',
+                  style: TextStyle(
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.videocam,
-                      color: AppColors.primary, size: 32),
-                  SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-                      Text('CRUX',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              letterSpacing: 4)),
-                      Text('Version 2.0.0',
-                          style: TextStyle(
-                              color: AppColors.grey,
-                              fontSize: 12)),
-                    ],
+                    fontSize: 16,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedLanguage = 'fr');
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _selectedLanguage == 'fr'
+                                ? AppColors.primary
+                                : AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Francais',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedLanguage = 'en');
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _selectedLanguage == 'en'
+                                ? AppColors.primary
+                                : AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'English',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
+          const SizedBox(height: 16),
 
-  Widget _languageTile({
-    required String flag,
-    required String language,
-    required String code,
-  }) {
-    final isSelected = _selectedLanguage == code;
-    return ListTile(
-      onTap: () => _changeLanguage(code),
-      leading: Text(flag, style: const TextStyle(fontSize: 28)),
-      title: Text(
-        language,
-        style: TextStyle(
-          color:
-              isSelected ? AppColors.primary : Colors.white,
-          fontWeight: isSelected
-              ? FontWeight.bold
-              : FontWeight.normal,
-        ),
+          // Section Notifications
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Notifications',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Activer les notifications',
+                      style: TextStyle(
+                        color: AppColors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                Switch(
+                  value: _notificationsEnabled,
+                  onChanged: (value) {
+                    setState(() => _notificationsEnabled = value);
+                  },
+                  activeColor: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Section Mode Sombre
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mode sombre',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Toujours active',
+                      style: TextStyle(
+                        color: AppColors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                Switch(
+                  value: _darkModeEnabled,
+                  onChanged: (value) {
+                    setState(() => _darkModeEnabled = value);
+                  },
+                  activeColor: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Section A propos
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'A propos',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Version',
+                      style: TextStyle(color: AppColors.grey),
+                    ),
+                    Text(
+                      '1.0.0',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Developpeur',
+                      style: TextStyle(color: AppColors.grey),
+                    ),
+                    Text(
+                      'MESCHAC',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Bouton Deconnexion
+          ElevatedButton.icon(
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: AppColors.surface,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                  title: const Text(
+                    'Deconnexion',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  content: const Text(
+                    'Vous etes sur de vouloir vous deconnecter ?',
+                    style: TextStyle(color: AppColors.grey),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.pop(context, false),
+                      child: const Text(
+                        'Annuler',
+                        style:
+                            TextStyle(color: AppColors.primary),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () =>
+                          Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.danger),
+                      child: const Text('Deconnecter',
+                          style: TextStyle(
+                              color: Colors.white)),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await AuthService.logout();
+                if (mounted) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const LoginScreen()),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.logout),
+            label: const Text('Deconnexion'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ],
       ),
-      trailing: isSelected
-          ? const Icon(Icons.check_circle,
-              color: AppColors.primary, size: 22)
-          : const Icon(Icons.circle_outlined,
-              color: AppColors.grey, size: 22),
     );
   }
 }
