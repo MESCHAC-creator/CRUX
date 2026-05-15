@@ -22,33 +22,76 @@ class MeetingScreenDaily extends StatefulWidget {
 class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
   late WebViewController _webViewController;
   bool _isLoading = true;
+  bool _permissionsGranted = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _requestPermissionsFirst();
+    _checkAndRequestPermissions();
   }
 
-  Future<void> _requestPermissionsFirst() async {
+  Future<void> _checkAndRequestPermissions() async {
     try {
-      print('🔐 Requesting camera and microphone permissions...');
+      print('🔐 Checking permissions...');
 
-      // Demander les permissions AVANT d'initialiser le WebView
-      final cameraStatus = await Permission.camera.request();
-      final micStatus = await Permission.microphone.request();
+      // Vérifier l'état actuel
+      final cameraStatus = await Permission.camera.status;
+      final micStatus = await Permission.microphone.status;
 
-      print('📷 Camera: ${cameraStatus.isDenied ? 'DENIED' : 'GRANTED'}');
-      print('🎤 Microphone: ${micStatus.isDenied ? 'DENIED' : 'GRANTED'}');
+      print('📷 Camera status: $cameraStatus');
+      print('🎤 Microphone status: $micStatus');
 
-      if (mounted) {
+      // Si déjà accordées, continuer
+      if (cameraStatus.isGranted && micStatus.isGranted) {
+        print('✅ Permissions already granted');
         _initializeWebView();
+        return;
       }
+
+      // Demander les permissions
+      print('📋 Requesting permissions...');
+      
+      final cameraResult = await Permission.camera.request();
+      final micResult = await Permission.microphone.request();
+
+      print('📷 Camera result: $cameraResult');
+      print('🎤 Microphone result: $micResult');
+
+      if (cameraResult.isDenied || micResult.isDenied) {
+        print('⚠️ Permissions denied by user');
+        setState(() {
+          _errorMessage =
+              'Les permissions camera et microphone sont requises pour utiliser la videconference.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (cameraResult.isDenied || micResult.isDenied) {
+        print('❌ Permissions permanently denied');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                  'Les permissions sont refusees. Allez aux parametres.'),
+              backgroundColor: AppColors.danger,
+              action: SnackBarAction(
+                label: 'Parametres',
+                onPressed: () => openAppSettings(),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      print('✅ Permissions granted');
+      _permissionsGranted = true;
+      _initializeWebView();
     } catch (e) {
-      print('❌ Error requesting permissions: $e');
-      if (mounted) {
-        _initializeWebView();
-      }
+      print('❌ Error checking permissions: $e');
+      _initializeWebView();
     }
   }
 
@@ -60,6 +103,12 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
 
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      // IMPORTANT: Permettre les demandes de permission WebView
+      ..setOnPermissionRequest((request) async {
+        print('🔐 WebView permission request: ${request.types}');
+        // Accepter TOUTES les demandes de permission
+        return await request.grant();
+      })
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) {
@@ -82,9 +131,8 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
           },
         ),
       )
-      // IMPORTANT: Activer les permissions pour le WebView
       ..setUserAgent(
-          'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36')
+          'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Mobile Safari/537.36')
       ..loadRequest(Uri.parse(roomUrl));
 
     _webViewController = controller;
@@ -118,42 +166,51 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
     if (_errorMessage != null) {
       return Scaffold(
         backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: AppColors.surface,
+          title: const Text('Erreur'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline,
-                  color: AppColors.danger, size: 60),
-              const SizedBox(height: 16),
-              const Text(
-                'Erreur de connexion',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline,
+                    color: AppColors.danger, size: 60),
+                const SizedBox(height: 16),
+                const Text(
+                  'Erreur de connexion',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
                   _errorMessage!,
                   style: const TextStyle(
                       color: Colors.white54, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _isLoading = true;
-                    _errorMessage = null;
-                  });
-                  _initializeWebView();
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reessayer'),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary),
-              ),
-            ],
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _isLoading = true;
+                      _errorMessage = null;
+                      _permissionsGranted = false;
+                    });
+                    _checkAndRequestPermissions();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reessayer'),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary),
+                ),
+              ],
+            ),
           ),
         ),
       );
