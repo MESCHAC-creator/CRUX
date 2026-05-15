@@ -206,6 +206,222 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  Future<void> _scheduleMeeting() async {
+    final titleController = TextEditingController();
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    
+    if (!_permissionsGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Permissions requises'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
+          title: const Text('Programmer Une Reunion',
+              style: TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Titre de la reunion',
+                    hintStyle: const TextStyle(color: AppColors.grey),
+                    filled: true,
+                    fillColor: AppColors.surfaceLight,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now()
+                          .add(const Duration(days: 365)),
+                    );
+                    if (date != null) {
+                      setState(() => selectedDate = date);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today,
+                            color: AppColors.primary),
+                        const SizedBox(width: 12),
+                        Text(
+                          selectedDate != null
+                              ? DateFormat('dd/MM/yyyy')
+                                  .format(selectedDate!)
+                              : 'Selectionnez la date',
+                          style: TextStyle(
+                            color: selectedDate != null
+                                ? Colors.white
+                                : AppColors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (time != null) {
+                      setState(() => selectedTime = time);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time,
+                            color: AppColors.primary),
+                        const SizedBox(width: 12),
+                        Text(
+                          selectedTime != null
+                              ? selectedTime!.format(context)
+                              : 'Selectionnez l\'heure',
+                          style: TextStyle(
+                            color: selectedTime != null
+                                ? Colors.white
+                                : AppColors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler',
+                  style: TextStyle(color: AppColors.primary)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (titleController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Entrez un titre'),
+                        backgroundColor: AppColors.danger),
+                  );
+                  return;
+                }
+                if (selectedDate == null || selectedTime == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Selectionnez date et heure'),
+                        backgroundColor: AppColors.danger),
+                  );
+                  return;
+                }
+
+                final scheduledAt = DateTime(
+                  selectedDate!.year,
+                  selectedDate!.month,
+                  selectedDate!.day,
+                  selectedTime!.hour,
+                  selectedTime!.minute,
+                );
+
+                Navigator.pop(context);
+                _scheduleMeetingProcess(
+                  titleController.text.trim(),
+                  scheduledAt,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary),
+              child: const Text('Programmer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _scheduleMeetingProcess(
+      String title, DateTime scheduledAt) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+            color: AppColors.primary),
+      ),
+    );
+
+    try {
+      final meeting = await _meetingService.scheduleMeeting(
+        title,
+        widget.user.uid,
+        widget.user.name,
+        scheduledAt,
+        mode: _selectedMode,
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      if (meeting != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Reunion programmee avec succes !'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _joinMeeting() async {
     final codeController = TextEditingController();
 
@@ -503,6 +719,13 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     const SizedBox(height: 12),
                     CustomButton(
+                      text: 'PROGRAMMER REUNION',
+                      onPressed: _scheduleMeeting,
+                      color: AppColors.primary,
+                      icon: Icons.schedule,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomButton(
                       text: 'REJOINDRE REUNION',
                       onPressed: _joinMeeting,
                       color: AppColors.surfaceLight,
@@ -551,8 +774,11 @@ class _HomeScreenState extends State<HomeScreen>
                       itemCount: meetings.length,
                       itemBuilder: (context, index) {
                         final meeting = meetings[index];
-                        final time = DateFormat('HH:mm').format(
-                            meeting.scheduledAt ??
+                        final date = DateFormat('dd/MM')
+                            .format(meeting.scheduledAt ??
+                                DateTime.now());
+                        final time = DateFormat('HH:mm')
+                            .format(meeting.scheduledAt ??
                                 DateTime.now());
                         return Container(
                           margin:
@@ -603,12 +829,25 @@ class _HomeScreenState extends State<HomeScreen>
                                       ],
                                     ),
                                   ),
-                                  Text(time,
-                                      style: const TextStyle(
-                                          color: AppColors
-                                              .primary,
-                                          fontWeight:
-                                              FontWeight.bold)),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment
+                                            .end,
+                                    children: [
+                                      Text(date,
+                                          style: const TextStyle(
+                                              color: AppColors
+                                                  .primary,
+                                              fontWeight:
+                                                  FontWeight
+                                                      .bold)),
+                                      Text(time,
+                                          style: const TextStyle(
+                                              color: AppColors
+                                                  .primary,
+                                              fontSize: 12)),
+                                    ],
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 12),
