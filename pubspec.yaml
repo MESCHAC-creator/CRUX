@@ -17,11 +17,12 @@ dependencies:
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
   google_sign_in: ^6.2.1
-  agora_rtc_engine: ^6.3.2
   permission_handler: ^11.3.1
   shared_preferences: ^2.3.2
   intl: ^0.20.2
   cupertino_icons: ^1.0.2
+  http: ^1.1.0
+  webview_flutter: ^4.2.0
 
 dev_dependencies:
   flutter_test:
