@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../utils/colors.dart';
-import '../utils/constants.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/custom_textfield.dart';
 import '../services/auth_service.dart';
-import 'home_screen.dart';
+import '../models/user_model.dart';
+import 'home_screen_daily.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,39 +14,86 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
+  final TextEditingController _emailController =
+      TextEditingController();
+  final TextEditingController _passwordController =
+      TextEditingController();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
+  String? _errorMessage;
 
-  void _login() async {
+  Future<void> _login() async {
     if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Remplissez tous les champs')),
-      );
+        _passwordController.text.isEmpty) {
+      setState(() => _errorMessage = 'Tous les champs sont requis');
       return;
     }
-    setState(() => _isLoading = true);
-    final user = await _authService.login(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
-    setState(() => _isLoading = false);
-    if (user != null && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final user = await AuthService.loginWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              _authService.lastError ?? 'Email ou mot de passe incorrect'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+
+      if (user != null) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => HomeScreenDaily(user: user)),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _errorMessage = e.toString());
+    } finally {
+      setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final googleSignIn = GoogleSignIn();
+      final googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final user = await AuthService.loginWithGoogle(googleUser);
+
+      if (user != null) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => HomeScreenDaily(user: user)),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _errorMessage = e.toString());
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -55,115 +101,262 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 48),
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryDark],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 24, vertical: 32),
+          children: [
+            // Logo/Title
+            Center(
+              child: Column(
+                children: [
+                  Text(
+                    'CRUX',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 4,
                     ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
                   ),
-                  child: const Icon(
-                    Icons.videocam,
-                    color: Colors.white,
-                    size: 36,
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Videosconference simplifiee',
+                    style: TextStyle(
+                      color: AppColors.grey,
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 48),
+
+            // Email Field
+            const Text(
+              'Email',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'votre@email.com',
+                hintStyle: const TextStyle(color: AppColors.grey),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.primary, width: 2),
                 ),
               ),
-              const SizedBox(height: 24),
-              const Center(
-                child: Text(
-                  'CRUX',
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 6,
+            ),
+            const SizedBox(height: 24),
+
+            // Password Field
+            const Text(
+              'Mot de passe',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _passwordController,
+              obscureText: !_isPasswordVisible,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Entrez votre mot de passe',
+                hintStyle: const TextStyle(color: AppColors.grey),
+                filled: true,
+                fillColor: AppColors.surface,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: AppColors.grey,
                   ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Center(
-                child: Text(
-                  AppConstants.tagline,
-                  style: TextStyle(color: AppColors.grey, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 48),
-              const Text(
-                'Connexion',
-                style: TextStyle(
-                  color: AppColors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-              CustomTextField(
-                hint: AppConstants.emailHint,
-                controller: _emailController,
-                icon: Icons.email_outlined,
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                hint: AppConstants.passwordHint,
-                controller: _passwordController,
-                icon: Icons.lock_outlined,
-                isPassword: true,
-              ),
-              const SizedBox(height: 32),
-              CustomButton(
-                text: AppConstants.loginButton,
-                onPressed: _login,
-                isLoading: _isLoading,
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: TextButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const RegisterScreen()),
-                    );
+                    setState(() => _isPasswordVisible =
+                        !_isPasswordVisible);
                   },
-                  child: RichText(
-                    text: const TextSpan(
-                      text: 'Pas de compte ? ',
-                      style: TextStyle(color: AppColors.grey),
-                      children: [
-                        TextSpan(
-                          text: 'S\'inscrire',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.primary, width: 2),
+                ),
+              ),
+            ),
+
+            // Error Message
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: AppColors.danger, width: 1),
+                ),
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(
+                    color: AppColors.danger,
+                    fontSize: 12,
                   ),
                 ),
               ),
             ],
-          ),
+
+            const SizedBox(height: 32),
+
+            // Login Button
+            ElevatedButton(
+              onPressed: _isLoading ? null : _login,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                disabledBackgroundColor:
+                    AppColors.primary.withOpacity(0.5),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Se connecter',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Divider
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 1,
+                    color: Colors.white10,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'OU',
+                    style: TextStyle(
+                      color: AppColors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    height: 1,
+                    color: Colors.white10,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Google Sign In
+            ElevatedButton.icon(
+              onPressed:
+                  _isLoading ? null : _loginWithGoogle,
+              icon: const Text('🔵'),
+              label: const Text('Connexion Google'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.surface,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor:
+                    AppColors.surface.withOpacity(0.5),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Register Link
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Pas de compte ? ',
+                  style: TextStyle(
+                    color: AppColors.grey,
+                    fontSize: 14,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            const RegisterScreen()),
+                  ),
+                  child: const Text(
+                    'S\'inscrire',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
