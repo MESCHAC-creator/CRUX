@@ -46,10 +46,25 @@ class _MeetingScreenState extends State<MeetingScreen> {
   String? _reaction;
   int? _speakingUid;
 
+  // HÔTE ET CO-HÔTE
+  bool _canRecord = false;
+
   @override
   void initState() {
     super.initState();
+    _checkIfCanRecord();
     _initAgora();
+  }
+
+  void _checkIfCanRecord() {
+    final isHost = widget.meeting.hostId == widget.user.uid;
+    final isCoHost = widget.meeting.coHosts.contains(widget.user.uid);
+    setState(() => _canRecord = isHost || isCoHost);
+    
+    print('🔐 User: ${widget.user.uid}');
+    print('🔐 Host: ${widget.meeting.hostId}');
+    print('🔐 Co-hosts: ${widget.meeting.coHosts}');
+    print('🔐 Can Record: $_canRecord');
   }
 
   Future<void> _initAgora() async {
@@ -57,12 +72,15 @@ class _MeetingScreenState extends State<MeetingScreen> {
       await _agoraService.initialize();
       _agoraService.registerEventHandler(
         onUserJoined: (uid) {
+          print('👤 User joined: $uid');
           if (mounted) setState(() => _remoteUsers.add(uid));
         },
         onUserOffline: (uid) {
+          print('👤 User offline: $uid');
           if (mounted) setState(() => _remoteUsers.remove(uid));
         },
         onJoinSuccess: () {
+          print('✅ Join success!');
           if (mounted) setState(() => _isJoined = true);
         },
         onUserSpeaking: (uid, volume) {
@@ -75,6 +93,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       await _agoraService.joinChannel(widget.meeting.id);
       if (mounted) setState(() => _isInitializing = false);
     } catch (e) {
+      print('❌ Agora init error: $e');
       if (mounted) {
         setState(() {
           _isInitializing = false;
@@ -134,14 +153,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }
 
   void _toggleRecording() async {
-    final isHost = widget.meeting.hostId == widget.user.uid;
-    final isCoHost = widget.meeting.coHosts.contains(widget.user.uid);
-
-    if (!isHost && !isCoHost) {
+    if (!_canRecord) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              'Seul l\'hote et les co-hotes peuvent enregistrer'),
+          content: Text('Seul l\'hote ou les co-hotes peuvent enregistrer'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -154,8 +169,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-                'Enregistrement sauvegarde dans Telechargements'),
+            content: Text('Enregistrement sauvegarde dans Telechargements'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -321,89 +335,71 @@ class _MeetingScreenState extends State<MeetingScreen> {
           color: Colors.black,
           width: double.infinity,
           height: double.infinity,
-          child: !_isJoined
-              ? const Center(
+        ),
+        if (_isJoined && _agoraService.engine != null)
+          _remoteUsers.isEmpty
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(
-                          color: AppColors.primary),
-                      SizedBox(height: 16),
-                      Text('Connexion en cours...',
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.person,
+                            color: Colors.white54, size: 40),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                          'En attente de participants...',
                           style: TextStyle(
                               color: Colors.white54,
                               fontSize: 16)),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: _copyCode,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceLight,
+                            borderRadius:
+                                BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Code: ${widget.meeting.id}',
+                                style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight:
+                                        FontWeight.bold,
+                                    letterSpacing: 2),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.copy,
+                                  color: AppColors.primary,
+                                  size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 )
-              : _remoteUsers.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment:
-                            MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceLight,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.person,
-                                color: Colors.white54,
-                                size: 40),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                              'En attente de participants...',
-                              style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 16)),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: _copyCode,
-                            child: Container(
-                              padding:
-                                  const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceLight,
-                                borderRadius:
-                                    BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Code: ${widget.meeting.id}',
-                                    style: const TextStyle(
-                                        color: AppColors.primary,
-                                        fontWeight:
-                                            FontWeight.bold,
-                                        letterSpacing: 2),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.copy,
-                                      color: AppColors.primary,
-                                      size: 16),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : AgoraVideoView(
-                      controller: VideoViewController.remote(
-                        rtcEngine: _agoraService.engine!,
-                        canvas: VideoCanvas(
-                            uid: _remoteUsers.first),
-                        connection: RtcConnection(
-                            channelId: widget.meeting.id),
-                      ),
-                    ),
-        ),
+              : AgoraVideoView(
+                  controller: VideoViewController.remote(
+                    rtcEngine: _agoraService.engine!,
+                    canvas: VideoCanvas(
+                        uid: _remoteUsers.first),
+                    connection: RtcConnection(
+                        channelId: widget.meeting.id),
+                  ),
+                ),
         if (_isJoined && _agoraService.engine != null)
           Positioned(
             top: 16,
@@ -761,11 +757,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }
 
   Widget _buildControls() {
-    final isHost = widget.meeting.hostId == widget.user.uid;
-    final isCoHost =
-        widget.meeting.coHosts.contains(widget.user.uid);
-    final canRecord = isHost || isCoHost;
-
     return Container(
       padding: const EdgeInsets.symmetric(
           vertical: 16, horizontal: 12),
@@ -780,7 +771,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  if (canRecord)
+                  if (_canRecord)
                     _moreOptionButton(
                       icon: _isRecording
                           ? Icons.stop_circle
@@ -795,15 +786,15 @@ class _MeetingScreenState extends State<MeetingScreen> {
                     )
                   else
                     _moreOptionButton(
-                      icon: Icons.fiber_manual_record,
-                      label: 'Enregistrer',
+                      icon: Icons.lock,
+                      label: 'Enregistrement (Hote)',
                       color: AppColors.grey,
                       onTap: () {
                         ScaffoldMessenger.of(context)
                             .showSnackBar(
                           const SnackBar(
                             content: Text(
-                                'Seul l\'hote peut enregistrer'),
+                                'Seul l\'hote ou les co-hotes peuvent enregistrer'),
                             backgroundColor: AppColors.danger,
                           ),
                         );
