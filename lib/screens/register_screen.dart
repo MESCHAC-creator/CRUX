@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
-import '../utils/constants.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/custom_textfield.dart';
 import '../services/auth_service.dart';
-import 'home_screen.dart';
+import '../models/user_model.dart';
+import 'home_screen_daily.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,109 +18,330 @@ class _RegisterScreenState extends State<RegisterScreen> {
       TextEditingController();
   final TextEditingController _passwordController =
       TextEditingController();
-  final AuthService _authService = AuthService();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
+  String? _errorMessage;
 
-  void _register() async {
+  Future<void> _register() async {
     if (_nameController.text.trim().isEmpty ||
         _emailController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Remplissez tous les champs')),
-      );
+        _passwordController.text.isEmpty ||
+        _confirmPasswordController.text.isEmpty) {
+      setState(() =>
+          _errorMessage = 'Tous les champs sont requis');
       return;
     }
-    if (_passwordController.text.trim().length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content:
-                Text('Mot de passe minimum 6 caracteres')),
-      );
+
+    if (_passwordController.text !=
+        _confirmPasswordController.text) {
+      setState(() =>
+          _errorMessage = 'Les mots de passe ne correspondent pas');
       return;
     }
-    setState(() => _isLoading = true);
-    final user = await _authService.register(
-      _nameController.text.trim(),
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
-    setState(() => _isLoading = false);
-    if (user != null && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-            builder: (_) => HomeScreen(user: user)),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_authService.lastError ??
-              'Erreur lors de l\'inscription'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+
+    if (_passwordController.text.length < 6) {
+      setState(() => _errorMessage =
+          'Le mot de passe doit contenir au moins 6 caracteres');
+      return;
     }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final user = await AuthService.registerWithEmail(
+        _nameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (user != null) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => HomeScreenDaily(user: user),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _errorMessage = e.toString());
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        title: const Text(
+          'Inscription',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back,
+              color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
-              IconButton(
-                icon: const Icon(Icons.arrow_back,
-                    color: AppColors.white),
-                onPressed: () => Navigator.pop(context),
+        child: ListView(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 24, vertical: 24),
+          children: [
+            // Nom
+            const Text(
+              'Nom complet',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
               ),
-              const SizedBox(height: 24),
-              const Text(
-                'Créer un compte',
-                style: TextStyle(
-                  color: AppColors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Jean Dupont',
+                hintStyle: const TextStyle(color: AppColors.grey),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.primary, width: 2),
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Rejoignez CRUX et commencez à collaborer',
-                style: TextStyle(
-                    color: AppColors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 24),
+
+            // Email
+            const Text(
+              'Email',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
               ),
-              const SizedBox(height: 40),
-              CustomTextField(
-                hint: AppConstants.nameHint,
-                controller: _nameController,
-                icon: Icons.person_outlined,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'votre@email.com',
+                hintStyle: const TextStyle(color: AppColors.grey),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.primary, width: 2),
+                ),
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // Password
+            const Text(
+              'Mot de passe',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _passwordController,
+              obscureText: !_isPasswordVisible,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Entrez votre mot de passe',
+                hintStyle: const TextStyle(color: AppColors.grey),
+                filled: true,
+                fillColor: AppColors.surface,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: AppColors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() => _isPasswordVisible =
+                        !_isPasswordVisible);
+                  },
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.primary, width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Confirm Password
+            const Text(
+              'Confirmer le mot de passe',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _confirmPasswordController,
+              obscureText: !_isConfirmPasswordVisible,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Confirmez votre mot de passe',
+                hintStyle: const TextStyle(color: AppColors.grey),
+                filled: true,
+                fillColor: AppColors.surface,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isConfirmPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: AppColors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() =>
+                        _isConfirmPasswordVisible =
+                            !_isConfirmPasswordVisible);
+                  },
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: Colors.white10, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.primary, width: 2),
+                ),
+              ),
+            ),
+
+            // Error Message
+            if (_errorMessage != null) ...[
               const SizedBox(height: 16),
-              CustomTextField(
-                hint: AppConstants.emailHint,
-                controller: _emailController,
-                icon: Icons.email_outlined,
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                hint: AppConstants.passwordHint,
-                controller: _passwordController,
-                icon: Icons.lock_outlined,
-                isPassword: true,
-              ),
-              const SizedBox(height: 32),
-              CustomButton(
-                text: AppConstants.registerButton,
-                onPressed: _register,
-                isLoading: _isLoading,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: AppColors.danger, width: 1),
+                ),
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(
+                    color: AppColors.danger,
+                    fontSize: 12,
+                  ),
+                ),
               ),
             ],
-          ),
+
+            const SizedBox(height: 32),
+
+            // Register Button
+            ElevatedButton(
+              onPressed: _isLoading ? null : _register,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                disabledBackgroundColor:
+                    AppColors.primary.withOpacity(0.5),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'S\'inscrire',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+            ),
+          ],
         ),
       ),
     );
