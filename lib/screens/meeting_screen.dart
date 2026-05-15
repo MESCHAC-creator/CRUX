@@ -6,6 +6,7 @@ import '../utils/colors.dart';
 import '../models/user_model.dart';
 import '../models/meeting_model.dart';
 import '../services/agora_service.dart';
+import '../services/agora_token_service.dart';
 
 class MeetingScreen extends StatefulWidget {
   final MeetingModel meeting;
@@ -69,7 +70,14 @@ class _MeetingScreenState extends State<MeetingScreen> {
 
   Future<void> _initAgora() async {
     try {
+      print('\n=== INITIALIZING AGORA ===');
       await _agoraService.initialize();
+      
+      // GÉNÉRER LE TOKEN LOCALEMENT
+      print('🔑 Generating token for channel: ${widget.meeting.id}');
+      final token = await AgoraTokenService.generateToken(widget.meeting.id);
+      print('✅ Token generated successfully');
+      
       _agoraService.registerEventHandler(
         onUserJoined: (uid) {
           print('👤 User joined: $uid');
@@ -90,7 +98,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
           });
         },
       );
-      await _agoraService.joinChannel(widget.meeting.id);
+      
+      // JOINDRE LE CANAL AVEC LE TOKEN
+      await _agoraService.joinChannel(widget.meeting.id, token: token);
+      
       if (mounted) setState(() => _isInitializing = false);
     } catch (e) {
       print('❌ Agora init error: $e');
