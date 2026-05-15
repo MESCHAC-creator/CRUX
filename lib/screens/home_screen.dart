@@ -164,23 +164,53 @@ class _HomeScreenState extends State<HomeScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(
-            color: AppColors.primary),
+      builder: (context) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(
+                color: AppColors.primary),
+            const SizedBox(height: 16),
+            const Text(
+              'Creation de la reunion...',
+              style: TextStyle(
+                  color: Colors.white, fontSize: 14),
+            ),
+          ],
+        ),
       ),
     );
 
     try {
-      final meeting = await _meetingService.createMeeting(
-        title,
-        widget.user.uid,
-        widget.user.name,
-        mode: _selectedMode,
-      );
+      print('⏳ Creating meeting: $title (timeout: 15s)');
+      
+      final meeting = await _meetingService
+          .createMeeting(
+            title,
+            widget.user.uid,
+            widget.user.name,
+            mode: _selectedMode,
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              print('⏱️ Meeting creation timeout - returning local meeting');
+              return MeetingModel(
+                id: 'TEMP${DateTime.now().millisecondsSinceEpoch}',
+                title: title,
+                hostId: widget.user.uid,
+                hostName: widget.user.name,
+                coHosts: [],
+                createdAt: DateTime.now(),
+                mode: _selectedMode,
+              );
+            },
+          );
 
       if (mounted) Navigator.pop(context);
 
       if (meeting != null) {
+        print('✅ Meeting created/local: ${meeting.id}');
         if (mounted) {
           Navigator.push(
             context,
@@ -194,6 +224,7 @@ class _HomeScreenState extends State<HomeScreen>
         }
       }
     } catch (e) {
+      print('❌ Error creating meeting: $e');
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
