@@ -4,46 +4,53 @@ import '../utils/colors.dart';
 class CustomButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
-  final bool isLoading;
-  final Color? color;
+  final Color color;
+  final Color textColor;
+  final IconData? icon;
+  final double height;
+  final double borderRadius;
 
   const CustomButton({
     super.key,
     required this.text,
     required this.onPressed,
-    this.isLoading = false,
-    this.color,
+    this.color = AppColors.primary,
+    this.textColor = Colors.white,
+    this.icon,
+    this.height = 56,
+    this.borderRadius = 12,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color ?? AppColors.primary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          elevation: 0,
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(borderRadius),
         ),
-        child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2),
-              )
-            : Text(
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, color: textColor, size: 20),
+                const SizedBox(width: 8),
+              ],
+              Text(
                 text,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
               ),
+            ],
+          ),
+        ),
       ),
     );
   }
