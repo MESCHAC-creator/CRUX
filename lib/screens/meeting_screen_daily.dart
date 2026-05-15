@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../utils/colors.dart';
 import '../models/user_model.dart';
 import '../models/meeting_model.dart';
-import '../services/daily_service.dart';
 
 class MeetingScreenDaily extends StatefulWidget {
   final MeetingModel meeting;
@@ -22,52 +22,81 @@ class MeetingScreenDaily extends StatefulWidget {
 class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
   late WebViewController _webViewController;
   bool _isLoading = true;
-  String? _roomUrl;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _initializeRoom();
+    _requestPermissionsFirst();
   }
 
-  Future<void> _initializeRoom() async {
+  Future<void> _requestPermissionsFirst() async {
     try {
-      print('🔧 Initializing Daily room for: ${widget.meeting.id}');
+      print('🔐 Requesting camera and microphone permissions...');
 
-      // Obtenir ou créer la room
-      _roomUrl = await DailyService.getRoom(widget.meeting.id);
+      // Demander les permissions AVANT d'initialiser le WebView
+      final cameraStatus = await Permission.camera.request();
+      final micStatus = await Permission.microphone.request();
 
-      if (_roomUrl == null) {
-        setState(() {
-          _errorMessage = 'Erreur: Impossible de créer la room Daily';
-          _isLoading = false;
-        });
-        return;
-      }
+      print('📷 Camera: ${cameraStatus.isDenied ? 'DENIED' : 'GRANTED'}');
+      print('🎤 Microphone: ${micStatus.isDenied ? 'DENIED' : 'GRANTED'}');
 
-      print('✅ Room URL: $_roomUrl');
-
-      // Initialiser WebView avec la room
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        _initializeWebView();
       }
     } catch (e) {
-      print('❌ Error: $e');
+      print('❌ Error requesting permissions: $e');
       if (mounted) {
-        setState(() {
-          _errorMessage = 'Erreur: $e';
-          _isLoading = false;
-        });
+        _initializeWebView();
       }
+    }
+  }
+
+  void _initializeWebView() {
+    final roomCode = widget.meeting.id;
+    final roomUrl = 'https://crux.daily.co/$roomCode';
+
+    print('🔗 Loading Daily.co room: $roomUrl');
+
+    final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (String url) {
+            print('📱 Page loading: $url');
+          },
+          onPageFinished: (String url) {
+            print('✅ Page loaded: $url');
+            if (mounted) {
+              setState(() => _isLoading = false);
+            }
+          },
+          onWebResourceError: (WebResourceError error) {
+            print('❌ Web error: ${error.description}');
+            if (mounted) {
+              setState(() {
+                _errorMessage = error.description;
+                _isLoading = false;
+              });
+            }
+          },
+        ),
+      )
+      // IMPORTANT: Activer les permissions pour le WebView
+      ..setUserAgent(
+          'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36')
+      ..loadRequest(Uri.parse(roomUrl));
+
+    _webViewController = controller;
+
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (_isLoading && _errorMessage == null) {
       return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
@@ -77,7 +106,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
               CircularProgressIndicator(color: AppColors.primary),
               SizedBox(height: 16),
               Text(
-                'Initialisation de la reunion...',
+                'Chargement de la reunion...',
                 style: TextStyle(color: Colors.white54, fontSize: 14),
               ),
             ],
@@ -86,7 +115,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
       );
     }
 
-    if (_errorMessage != null || _roomUrl == null) {
+    if (_errorMessage != null) {
       return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
@@ -104,7 +133,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
-                  _errorMessage ?? 'Erreur inconnue',
+                  _errorMessage!,
                   style: const TextStyle(
                       color: Colors.white54, fontSize: 12),
                   textAlign: TextAlign.center,
@@ -117,7 +146,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
                     _isLoading = true;
                     _errorMessage = null;
                   });
-                  _initializeRoom();
+                  _initializeWebView();
                 },
                 icon: const Icon(Icons.refresh),
                 label: const Text('Reessayer'),
@@ -192,29 +221,13 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.call_end, color: AppColors.danger),
+              icon: const Icon(Icons.call_end,
+                  color: AppColors.danger),
               onPressed: () => Navigator.pop(context),
             ),
           ],
         ),
-        body: WebViewWidget(
-          controller: WebViewController()
-            ..setJavaScriptMode(JavaScriptMode.unrestricted)
-            ..setNavigationDelegate(
-              NavigationDelegate(
-                onPageStarted: (String url) {
-                  print('📱 Loading: $url');
-                },
-                onPageFinished: (String url) {
-                  print('✅ Page loaded: $url');
-                },
-                onWebResourceError: (WebResourceError error) {
-                  print('❌ Web error: ${error.description}');
-                },
-              ),
-            )
-            ..loadRequest(Uri.parse(_roomUrl!)),
-        ),
+        body: WebViewWidget(controller: _webViewController),
       ),
     );
   }
