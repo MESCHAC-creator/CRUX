@@ -1,14 +1,16 @@
-def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.withInputStream { properties.load(it) }
-}
+pluginManagement {
+    def flutterSdkPath = {
+        def properties = new Properties()
+        rootProject.file("local.properties").withInputStream { properties.load(it) }
+        properties.getProperty("flutter.sdk")
+    }()
+    includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
 
-def flutterSdkPath = localProperties.getProperty('flutter.sdk')
-if (flutterSdkPath == null) {
-    throw new GradleException("flutter.sdk not set in local.properties")
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
-
-includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
 
 include ":app"
