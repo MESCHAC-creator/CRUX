@@ -45,30 +45,41 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
       // Si déjà accordées, continuer
       if (cameraStatus.isGranted && micStatus.isGranted) {
         print('✅ Permissions already granted');
+        _permissionsGranted = true;
         _initializeWebView();
         return;
       }
 
       // Demander les permissions
       print('📋 Requesting permissions...');
-      
+
       final cameraResult = await Permission.camera.request();
       final micResult = await Permission.microphone.request();
 
       print('📷 Camera result: $cameraResult');
       print('🎤 Microphone result: $micResult');
 
-      if (cameraResult.isDenied || micResult.isDenied) {
-        print('⚠️ Permissions denied by user');
-        setState(() {
-          _errorMessage =
-              'Les permissions camera et microphone sont requises pour utiliser la videconference.';
-          _isLoading = false;
-        });
+      if (cameraResult.isGranted && micResult.isGranted) {
+        print('✅ Permissions granted');
+        _permissionsGranted = true;
+        _initializeWebView();
         return;
       }
 
       if (cameraResult.isDenied || micResult.isDenied) {
+        print('⚠️ Permissions denied by user');
+        if (mounted) {
+          setState(() {
+            _errorMessage =
+                'Les permissions camera et microphone sont requises pour la videconference.';
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      if (cameraResult.isPermanentlyDenied ||
+          micResult.isPermanentlyDenied) {
         print('❌ Permissions permanently denied');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -86,8 +97,6 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
         return;
       }
 
-      print('✅ Permissions granted');
-      _permissionsGranted = true;
       _initializeWebView();
     } catch (e) {
       print('❌ Error checking permissions: $e');
@@ -103,12 +112,8 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
 
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      // IMPORTANT: Permettre les demandes de permission WebView
-      ..setOnPermissionRequest((request) async {
-        print('🔐 WebView permission request: ${request.types}');
-        // Accepter TOUTES les demandes de permission
-        return await request.grant();
-      })
+      ..setUserAgent(
+          'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Mobile Safari/537.36')
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) {
@@ -131,8 +136,6 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
           },
         ),
       )
-      ..setUserAgent(
-          'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Mobile Safari/537.36')
       ..loadRequest(Uri.parse(roomUrl));
 
     _webViewController = controller;
