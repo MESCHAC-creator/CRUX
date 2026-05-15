@@ -7,7 +7,6 @@ class AgoraService {
 
   Future<void> initialize() async {
     try {
-      // 1. Demander permissions EXPLICITEMENT
       final micStatus = await Permission.microphone.request();
       final cameraStatus = await Permission.camera.request();
       
@@ -18,25 +17,21 @@ class AgoraService {
         throw Exception('Permissions refusees: Mic=$micStatus, Camera=$cameraStatus');
       }
 
-      // 2. Créer engine
       _engine = createAgoraRtcEngine();
       print('✅ Engine created');
       
-      // 3. Initialiser AVEC appId
       await _engine!.initialize(const RtcEngineContext(
         appId: '3ed3eb7e29c245df8fcd7eb10a346a3d',
         channelProfile: ChannelProfileType.channelProfileCommunication,
       ));
       print('✅ Engine initialized');
 
-      // 4. Activer audio + video
       await _engine!.enableAudio();
       print('✅ Audio enabled');
       
       await _engine!.enableVideo();
       print('✅ Video enabled');
 
-      // 5. Configurer video (IMPORTANT: avant startPreview)
       await _engine!.setVideoEncoderConfiguration(
         const VideoEncoderConfiguration(
           dimensions: VideoDimensions(width: 640, height: 480),
@@ -46,15 +41,12 @@ class AgoraService {
       );
       print('✅ Video encoder configured');
 
-      // 6. Set client role AVANT preview
       await _engine!.setClientRole(
           role: ClientRoleType.clientRoleBroadcaster);
       print('✅ Client role set');
       
-      // 7. Attendre un peu
       await Future.delayed(const Duration(milliseconds: 300));
       
-      // 8. START PREVIEW (local camera)
       await _engine!.startPreview();
       print('✅ Preview started - CAMERA SHOULD SHOW NOW');
       
@@ -72,7 +64,7 @@ class AgoraService {
       await _engine!.joinChannel(
         token: token ?? '',
         channelId: channelName,
-        uid: 0, // 0 = auto-assign uid
+        uid: 0,
         options: const ChannelMediaOptions(
           clientRoleType: ClientRoleType.clientRoleBroadcaster,
           channelProfile: ChannelProfileType.channelProfileCommunication,
@@ -152,6 +144,7 @@ class AgoraService {
   Future<void> muteRemoteAudio(int uid, bool mute) async {
     try {
       await _engine!.muteRemoteAudioStream(uid: uid, mute: mute);
+      print('✅ Remote audio mute: uid=$uid, mute=$mute');
     } catch (e) {
       print('❌ Error muting remote audio: $e');
     }
@@ -160,6 +153,7 @@ class AgoraService {
   Future<void> muteRemoteVideo(int uid, bool mute) async {
     try {
       await _engine!.muteRemoteVideoStream(uid: uid, mute: mute);
+      print('✅ Remote video mute: uid=$uid, mute=$mute');
     } catch (e) {
       print('❌ Error muting remote video: $e');
     }
@@ -204,17 +198,18 @@ class AgoraService {
         onJoinSuccess?.call();
       },
       onUserJoined: (connection, uid, elapsed) {
-        print('✅ onUserJoined: $uid');
+        print('✅ onUserJoined: $uid (elapsed: $elapsed ms)');
         onUserJoined?.call(uid);
       },
       onUserOffline: (connection, uid, reason) {
-        print('✅ onUserOffline: $uid');
+        print('✅ onUserOffline: $uid (reason: $reason)');
         onUserOffline?.call(uid);
       },
       onAudioVolumeIndication: (connection, speakers,
           speakerNumber, totalVolume) {
         for (final speaker in speakers) {
           if ((speaker.volume ?? 0) > 50) {
+            print('🔊 User speaking: uid=${speaker.uid}, volume=${speaker.volume}');
             onUserSpeaking?.call(
                 speaker.uid ?? 0, speaker.volume ?? 0);
           }
@@ -226,8 +221,11 @@ class AgoraService {
       onConnectionStateChanged: (connection, state, reason) {
         print('🔄 Connection state: $state, reason: $reason');
       },
-      onLocalVideoStats: (connection, stats) {
-        print('📊 Local video: ${stats.sentFrameRate} fps, ${stats.sentBitrate} kbps');
+      onRemoteVideoStateChanged: (connection, remoteUid, state, reason, elapsed) {
+        print('📹 Remote video state: uid=$remoteUid, state=$state, reason=$reason');
+      },
+      onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) {
+        print('🎤 Remote audio state: uid=$remoteUid, state=$state, reason=$reason');
       },
     ));
   }
@@ -238,7 +236,7 @@ class AgoraService {
       await _engine?.stopPreview();
       await _engine?.leaveChannel();
       await _engine?.release();
-      print('✅ Agora disposed');
+      print('✅ Agora disposed successfully');
     } catch (e) {
       print('❌ Error disposing: $e');
     }
@@ -247,4 +245,5 @@ class AgoraService {
 
   bool get isRecording => _isRecording;
   RtcEngine? get engine => _engine;
+  bool get isInitialized => _engine != null;
 }
