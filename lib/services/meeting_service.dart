@@ -1,143 +1,216 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/meeting_model.dart';
-import 'dart:math';
+import '../models/user_model.dart';
 
 class MeetingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  String generateMeetingCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    Random random = Random();
-    return List.generate(6,
-        (index) => chars[random.nextInt(chars.length)]).join();
-  }
-
+  // Créer une nouvelle réunion (l'utilisateur devient automatiquement hôte)
   Future<MeetingModel?> createMeeting(
     String title,
     String hostId,
     String hostName, {
     String mode = 'standard',
-    String? password,
-    bool waitingRoom = false,
   }) async {
-    String id = generateMeetingCode();
-    MeetingModel meeting = MeetingModel(
-      id: id,
-      title: title,
-      hostId: hostId,
-      hostName: hostName,
-      createdAt: DateTime.now(),
-      isActive: true,
-      mode: mode,
-      password: password,
-      waitingRoom: waitingRoom,
-    );
-
     try {
-      await _firestore
-          .collection('meetings')
-          .doc(id)
-          .set(meeting.toMap(), SetOptions(merge: true))
-          .timeout(const Duration(seconds: 10));
-      
-      print('Meeting created: $id');
+      print('📝 Creating meeting: $title');
+
+      final meetingId = _generateMeetingId();
+      final now = DateTime.now();
+
+      final meeting = MeetingModel(
+        id: meetingId,
+        title: title,
+        hostId: hostId,
+        hostName: hostName,
+        coHosts: [], // Aucun co-hôte au démarrage
+        createdAt: now,
+        mode: mode,
+        isActive: true,
+      );
+
+      // Sauvegarder dans Firestore
+      await _firestore.collection('meetings').doc(meetingId).set(
+            meeting.toMap(),
+            SetOptions(merge: true),
+          );
+
+      print('✅ Meeting created: $meetingId');
       return meeting;
     } catch (e) {
-      print('Error creating meeting: $e');
-      return meeting;
+      print('❌ Error creating meeting: $e');
+      return null;
     }
   }
 
+  // Programmer une réunion (l'utilisateur devient automatiquement hôte)
   Future<MeetingModel?> scheduleMeeting(
     String title,
     String hostId,
     String hostName,
     DateTime scheduledAt, {
-    String? customCode,
     String mode = 'standard',
-    String? password,
-    bool waitingRoom = false,
   }) async {
-    String id = customCode ?? generateMeetingCode();
-    MeetingModel meeting = MeetingModel(
-      id: id,
-      title: title,
-      hostId: hostId,
-      hostName: hostName,
-      createdAt: DateTime.now(),
-      isActive: true,
-      scheduledAt: scheduledAt,
-      isScheduled: true,
-      mode: mode,
-      password: password,
-      waitingRoom: waitingRoom,
-    );
-
     try {
-      await _firestore
-          .collection('meetings')
-          .doc(id)
-          .set(meeting.toMap(), SetOptions(merge: true))
-          .timeout(const Duration(seconds: 10));
-      
-      print('Meeting scheduled: $id');
+      print('📅 Scheduling meeting: $title for $scheduledAt');
+
+      final meetingId = _generateMeetingId();
+      final now = DateTime.now();
+
+      final meeting = MeetingModel(
+        id: meetingId,
+        title: title,
+        hostId: hostId,
+        hostName: hostName,
+        coHosts: [],
+        createdAt: now,
+        scheduledAt: scheduledAt,
+        mode: mode,
+        isActive: false, // Pas encore active
+      );
+
+      // Sauvegarder dans Firestore
+      await _firestore.collection('meetings').doc(meetingId).set(
+            meeting.toMap(),
+            SetOptions(merge: true),
+          );
+
+      print('✅ Meeting scheduled: $meetingId');
       return meeting;
     } catch (e) {
-      print('Error scheduling meeting: $e');
-      return meeting;
+      print('❌ Error scheduling meeting: $e');
+      return null;
     }
   }
 
-  Future<List<MeetingModel>> getScheduledMeetings(String hostId) async {
+  // Rejoindre une réunion existante
+  Future<MeetingModel?> joinMeeting(String meetingId) async {
     try {
-      QuerySnapshot snapshot = await _firestore
-          .collection('meetings')
-          .where('hostId', isEqualTo: hostId)
-          .where('isScheduled', isEqualTo: true)
-          .get()
-          .timeout(const Duration(seconds: 10));
-      
-      return snapshot.docs
-          .map((doc) => MeetingModel.fromMap(
-              doc.data() as Map<String, dynamic>))
-          .toList()
-        ..sort((a, b) =>
-            (a.scheduledAt ?? DateTime.now())
-                .compareTo(b.scheduledAt ?? DateTime.now()));
+      print('🔗 Joining meeting: $meetingId');
+
+      final doc =
+          await _firestore.collection('meetings').doc(meetingId).get();
+
+      if (!doc.exists) {
+        print('❌ Meeting not found: $meetingId');
+        return null;
+      }
+
+      final meeting = MeetingModel.fromMap(doc.data() ?? {});
+      print('✅ Joined meeting: ${meeting.title}');
+      return meeting;
     } catch (e) {
-      print('Error getting scheduled meetings: $e');
+      print('❌ Error joining meeting: $e');
+      return null;
+    }
+  }
+
+  // Obtenir les réunions programmées de l'utilisateur
+  Future<List<MeetingModel>> getScheduledMeetings(String userId) async {
+    try {
+      print('📋 Fetching scheduled meetings for user: $userId');
+
+      final snapshot = await _firestore
+          .collection('meetings')
+          .where('hostId', isEqualTo: userId)
+          .where('isActive', isEqualTo: false)
+          .orderBy('scheduledAt')
+          .get();
+
+      final meetings = snapshot.docs
+          .map((doc) => MeetingModel.fromMap(doc.data()))
+          .toList();
+
+      print('✅ Found ${meetings.length} scheduled meetings');
+      return meetings;
+    } catch (e) {
+      print('❌ Error fetching scheduled meetings: $e');
       return [];
     }
   }
 
-  Future<MeetingModel?> joinMeeting(String code) async {
+  // Obtenir les réunions actives de l'utilisateur
+  Future<List<MeetingModel>> getActiveMeetings(String userId) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection('meetings')
-          .doc(code.toUpperCase())
-          .get()
-          .timeout(const Duration(seconds: 10));
+      print('📋 Fetching active meetings for user: $userId');
 
-      if (doc.exists) {
-        return MeetingModel.fromMap(
-            doc.data() as Map<String, dynamic>);
-      }
-      return null;
+      final snapshot = await _firestore
+          .collection('meetings')
+          .where('hostId', isEqualTo: userId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final meetings = snapshot.docs
+          .map((doc) => MeetingModel.fromMap(doc.data()))
+          .toList();
+
+      print('✅ Found ${meetings.length} active meetings');
+      return meetings;
     } catch (e) {
-      print('Error joining meeting: $e');
-      return null;
+      print('❌ Error fetching active meetings: $e');
+      return [];
     }
   }
 
-  Future<void> endMeeting(String meetingId) async {
+  // Ajouter un co-hôte à la réunion
+  Future<bool> addCoHost(String meetingId, String coHostId) async {
     try {
-      await _firestore
-          .collection('meetings')
-          .doc(meetingId)
-          .update({'isActive': false})
-          .timeout(const Duration(seconds: 10));
+      print('👥 Adding co-host: $coHostId to meeting: $meetingId');
+
+      await _firestore.collection('meetings').doc(meetingId).update({
+        'coHosts': FieldValue.arrayUnion([coHostId]),
+      });
+
+      print('✅ Co-host added');
+      return true;
     } catch (e) {
-      print('Error ending meeting: $e');
+      print('❌ Error adding co-host: $e');
+      return false;
     }
+  }
+
+  // Retirer un co-hôte
+  Future<bool> removeCoHost(String meetingId, String coHostId) async {
+    try {
+      print('👥 Removing co-host: $coHostId from meeting: $meetingId');
+
+      await _firestore.collection('meetings').doc(meetingId).update({
+        'coHosts': FieldValue.arrayRemove([coHostId]),
+      });
+
+      print('✅ Co-host removed');
+      return true;
+    } catch (e) {
+      print('❌ Error removing co-host: $e');
+      return false;
+    }
+  }
+
+  // Terminer une réunion
+  Future<bool> endMeeting(String meetingId) async {
+    try {
+      print('🏁 Ending meeting: $meetingId');
+
+      await _firestore.collection('meetings').doc(meetingId).update({
+        'isActive': false,
+      });
+
+      print('✅ Meeting ended');
+      return true;
+    } catch (e) {
+      print('❌ Error ending meeting: $e');
+      return false;
+    }
+  }
+
+  // Générer un ID de réunion unique (6 caractères)
+  String _generateMeetingId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = DateTime.now().millisecondsSinceEpoch % 36;
+    String id = '';
+    for (int i = 0; i < 6; i++) {
+      id += chars[(random + i) % chars.length];
+    }
+    return id;
   }
 }
