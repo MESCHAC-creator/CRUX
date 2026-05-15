@@ -9,6 +9,7 @@ class CustomButton extends StatelessWidget {
   final IconData? icon;
   final double height;
   final double borderRadius;
+  final bool isLoading;
 
   const CustomButton({
     super.key,
@@ -19,37 +20,47 @@ class CustomButton extends StatelessWidget {
     this.icon,
     this.height = 56,
     this.borderRadius = 12,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: isLoading ? null : onPressed,
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: color,
+          color: isLoading ? color.withOpacity(0.6) : color,
           borderRadius: BorderRadius.circular(borderRadius),
         ),
         child: Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, color: textColor, size: 20),
-                const SizedBox(width: 8),
-              ],
-              Text(
-                text,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+          child: isLoading
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, color: textColor, size: 20),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      text,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );
