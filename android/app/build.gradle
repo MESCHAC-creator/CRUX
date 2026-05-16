@@ -45,12 +45,11 @@ dependencies {
     implementation "com.google.android.material:material:1.9.0"
     implementation "androidx.multidex:multidex:2.0.1"
     
-    // Firebase - WITH EXPLICIT VERSIONS
-    implementation "com.google.firebase:firebase-bom:32.5.0"
-    implementation "com.google.firebase:firebase-auth"
-    implementation "com.google.firebase:firebase-firestore"
-    implementation "com.google.firebase:firebase-core"
-    implementation "com.google.firebase:firebase-common-ktx"
+    // Firebase - EXPLICIT VERSIONS (NO BOM)
+    implementation "com.google.firebase:firebase-core:21.1.1"
+    implementation "com.google.firebase:firebase-auth:22.1.2"
+    implementation "com.google.firebase:firebase-firestore:24.9.1"
+    implementation "com.google.firebase:firebase-common-ktx:20.3.1"
     
     // Google Services
     implementation "com.google.android.gms:play-services-auth:20.7.0"
