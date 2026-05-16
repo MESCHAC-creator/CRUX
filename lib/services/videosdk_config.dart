@@ -1,6 +1,6 @@
 class VideoSDKConfig {
   // ⚠️ REMPLACEZ PAR VOTRE API KEY VideoSDK
-  static const String API_KEY = 'YOUR_VIDEOSDK_API_KEY_HERE';
+  static const String API_KEY = 'bd7e2f14-977a-4e85-8ef5-bf7357a879f2';
   
   // URL API VideoSDK
   static const String API_URL = 'https://api.videosdk.live';
