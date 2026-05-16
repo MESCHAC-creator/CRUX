@@ -1,5 +1,5 @@
 name: crux
-description: "CRUX - Videoconference App with YouTube Live Streaming powered by VideoSDK"
+description: "CRUX - Videoconference with YouTube Live - Powered by ZegoCloud"
 
 publish_to: 'none'
 
@@ -25,7 +25,7 @@ dependencies:
   permission_handler: ^11.3.0
   image_picker: ^1.0.8
 
-  # Storage & Preferences
+  # Storage
   shared_preferences: ^2.3.2
 
   # Internationalization
@@ -34,10 +34,10 @@ dependencies:
   # Networking
   http: ^1.1.0
 
-  # VideoSDK - STABLE VERSION
-  videosdk: ^1.1.4
-  flutter_webrtc: ^0.9.43
-  collection: ^1.17.0
+  # ZegoCloud - VIDEO CONFERENCE
+  zego_uikit_prebuilt_video_conference: ^4.0.0
+  zego_uikit_prebuilt_live_streaming: ^4.0.0
+  zego_uikit: ^4.0.0
 
   # UI
   cupertino_icons: ^1.0.2
@@ -50,16 +50,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - assets/images/
-    - assets/icons/
-
-  fonts:
-    - family: Roboto
-      fonts:
-        - asset: assets/fonts/Roboto-Regular.ttf
-        - asset: assets/fonts/Roboto-Bold.ttf
-          weight: 700
-        - asset: assets/fonts/Roboto-Light.ttf
-          weight: 300
