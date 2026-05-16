@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../utils/colors.dart';
 import '../models/user_model.dart';
 import '../models/meeting_model.dart';
-import '../services/permissions_page.dart';
 
 class MeetingScreenDaily extends StatefulWidget {
   final MeetingModel meeting;
@@ -23,30 +23,54 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
   late WebViewController _webViewController;
   bool _permissionsGranted = false;
   bool _isLoading = true;
+  bool _showingPermissions = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    // Afficher la page de permissions d'abord
-    _showPermissionsPage();
+    // Commence par montrer la page de permissions
+    _showingPermissions = true;
+    _isLoading = false;
   }
 
-  void _showPermissionsPage() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => PermissionsPage(
-        meetingCode: widget.meeting.id,
-        onPermissionsGranted: (granted) {
-          if (granted) {
-            Navigator.pop(context);
-            setState(() => _permissionsGranted = true);
-            _initializeWebView();
-          }
-        },
-      ),
-    );
+  Future<void> _requestPermissions() async {
+    setState(() => _isLoading = true);
+
+    try {
+      print('🔐 Requesting permissions...');
+
+      final cameraStatus = await Permission.camera.request();
+      final micStatus = await Permission.microphone.request();
+
+      print('📷 Camera: $cameraStatus');
+      print('🎤 Microphone: $micStatus');
+
+      if (cameraStatus.isGranted && micStatus.isGranted) {
+        print('✅ Permissions granted');
+        setState(() {
+          _permissionsGranted = true;
+          _showingPermissions = false;
+          _isLoading = false;
+        });
+        _initializeWebView();
+      } else {
+        print('⚠️ Permissions denied');
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Camera et microphone requis'),
+              backgroundColor: AppColors.danger,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      setState(() => _isLoading = false);
+    }
   }
 
   void _initializeWebView() {
@@ -82,16 +106,150 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
         ),
       )
       ..loadRequest(Uri.parse(roomUrl));
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // PERMISSIONS PAGE
+    if (_showingPermissions) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // BACK BUTTON
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // TITLE
+                  const Text(
+                    'Permissions requises',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Pour utiliser la videconference, nous avons besoin d\'acceder a votre camera et votre microphone.',
+                    style: TextStyle(
+                      color: AppColors.grey,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // CAMERA PERMISSION CARD
+                  _buildPermissionCard(
+                    icon: '📷',
+                    title: 'Camera',
+                    description:
+                        'Necessaire pour que les autres vous voient',
+                  ),
+                  const SizedBox(height: 16),
+
+                  // MICROPHONE PERMISSION CARD
+                  _buildPermissionCard(
+                    icon: '🎤',
+                    title: 'Microphone',
+                    description:
+                        'Necessaire pour que les autres vous entendent',
+                  ),
+                  const SizedBox(height: 40),
+
+                  // INSTRUCTIONS
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Comment donner l\'acces ?',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          '1. Cliquez sur "Autoriser l\'acces" ci-dessous\n'
+                          '2. Des dialogs aparaitront pour chaque permission\n'
+                          '3. Acceptez les 2 permissions\n'
+                          '4. La reunion se lancera automatiquement',
+                          style: TextStyle(
+                            color: AppColors.grey,
+                            fontSize: 12,
+                            height: 1.6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // BUTTON
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed:
+                          _isLoading ? null : _requestPermissions,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        disabledBackgroundColor:
+                            AppColors.primary.withOpacity(0.5),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Autoriser l\'acces',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     // LOADING STATE
-    if (_isLoading && _errorMessage == null && !_permissionsGranted) {
+    if (_isLoading && _errorMessage == null && _permissionsGranted) {
       return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
@@ -160,8 +318,9 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
                     setState(() {
                       _isLoading = true;
                       _errorMessage = null;
+                      _showingPermissions = true;
+                      _permissionsGranted = false;
                     });
-                    _showPermissionsPage();
                   },
                   icon: const Icon(Icons.refresh),
                   label: const Text('Reessayer'),
@@ -256,6 +415,59 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
         body: WebViewWidget(
           controller: _webViewController,
         ),
+      ),
+    );
+  }
+
+  Widget _buildPermissionCard({
+    required String icon,
+    required String title,
+    required String description,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10, width: 2),
+      ),
+      child: Row(
+        children: [
+          Text(
+            icon,
+            style: const TextStyle(fontSize: 32),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: AppColors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(
+            Icons.circle_outlined,
+            color: AppColors.grey,
+            size: 28,
+          ),
+        ],
       ),
     );
   }
