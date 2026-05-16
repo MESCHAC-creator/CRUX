@@ -36,17 +36,21 @@ android {
 
     packagingOptions {
         resources {
-            excludes += listOf(
-                "META-INF/proguard/androidx-*.pro",
-                "META-INF/androidx.*.version"
+            excludes.addAll(
+                listOf(
+                    "META-INF/proguard/androidx-*.pro",
+                    "META-INF/androidx.*.version"
+                )
             )
         }
     }
 
     lint {
-        disable += listOf(
-            "MissingDimensionRegistration",
-            "InvalidPackage"
+        disable.addAll(
+            listOf(
+                "MissingDimensionRegistration",
+                "InvalidPackage"
+            )
         )
     }
 }
