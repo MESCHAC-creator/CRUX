@@ -9,7 +9,6 @@ pluginManagement {
 plugins {
     id("com.android.application") version "8.1.4" apply false
     id("com.android.library") version "8.1.4" apply false
-    id("org.jetbrains.kotlin.android") version "1.9.10" apply false
 }
 
 include(":app")
@@ -17,7 +16,7 @@ include(":app")
 val localPropertiesFile = rootDir.resolve("local.properties")
 val localProperties = java.util.Properties().apply {
     if (localPropertiesFile.exists()) {
-        load(localPropertiesFile.inputStream())
+        localPropertiesFile.inputStream().use(::load)
     }
 }
 
