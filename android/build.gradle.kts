@@ -1,29 +1,85 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+}
+
+android {
+    namespace = "com.example.crux"
+    compileSdk = 36
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
-    dependencies {
-        classpath("com.google.gms:google-services:4.4.0")
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
+    }
+
+    defaultConfig {
+        applicationId = "com.example.crux"
+        minSdk = 24
+        targetSdk = 36
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+
+        multiDexEnabled = true
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug
+        }
+        debug {
+            debuggable = true
+        }
+    }
+
+    packagingOptions {
+        exclude 'META-INF/proguard/androidx-*.pro'
+    }
+
+    lintOptions {
+        disable 'MissingDimensionRegistration'
     }
 }
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
+
+flutter {
+    source = "../.."
 }
-val newBuildDir: Directory = rootProject.layout.buildDirectory
-    .dir("../../build")
-    .get()
-rootProject.layout.buildDirectory.value(newBuildDir)
-subprojects {
-    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.value(newSubprojectBuildDir)
-}
-subprojects {
-    project.evaluationDependsOn(":app")
-}
-tasks.register<Delete>("clean") {
-    delete(rootProject.layout.buildDirectory)
+
+dependencies {
+    // Core Android
+    implementation "androidx.core:core:1.12.0"
+    implementation "androidx.appcompat:appcompat:1.6.1"
+    implementation "com.google.android.material:material:1.9.0"
+
+    // Firebase
+    implementation platform("com.google.firebase:firebase-bom:32.5.0")
+    implementation "com.google.firebase:firebase-auth"
+    implementation "com.google.firebase:firebase-firestore"
+    implementation "com.google.firebase:firebase-core"
+    implementation "com.google.firebase:firebase-common-ktx"
+
+    // Google Play Services
+    implementation "com.google.android.gms:play-services-basement:18.3.0"
+    implementation "com.google.android.gms:play-services-auth:20.7.0"
+
+    // Multidex
+    implementation "androidx.multidex:multidex:2.0.1"
+
+    // WebView
+    implementation "androidx.webkit:webkit:1.7.0"
+
+    // Image handling
+    implementation "androidx.exifinterface:exifinterface:1.3.6"
+
+    // Tests
+    testImplementation "junit:junit:4.13.2"
+    androidTestImplementation "androidx.test:runner:1.5.2"
+    androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"
 }
