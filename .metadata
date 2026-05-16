@@ -1,42 +1,29 @@
 # This file tracks properties of this Flutter project.
-# Used by Flutter tool to assess capabilities and perform upgrades etc.
-#
-# This file should be version controlled and should not be manually edited.
+# Used by Flutter tooling to track, build and provide build status information
+# for your project. This file is typically not edited by hand, but instead
+# should be updated by Flutter tools as they work.
 
 version:
-  revision: "00b0c91f06209d9e4a41f71b7a512d6eb3b9c694"
-  channel: "stable"
+  revision: 2f0b6a02cf9cd9a17a61c637f64fe4cec1a79d64
+  channel: stable
 
 project_type: app
 
-# Tracks metadata for the flutter migrate command
-migration:
-  platforms:
-    - platform: root
-      create_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-      base_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-    - platform: android
-      create_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-      base_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-    - platform: ios
-      create_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-      base_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-    - platform: linux
-      create_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-      base_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-    - platform: macos
-      create_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-      base_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-    - platform: web
-      create_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
-      base_revision: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
+# User provided section
 
-  # User provided section
+# List of Local paths (relative to this file) that should be
+# symlinked into the .dart_tool directory of the Flutter root.
+# Used when the Flutter SDK is stripped out.
+# This is *not* the place to list dependencies for your application.
+# Instead, list them in your pubspec.yaml file.
 
-  # List of Local paths (relative to this file) that should be
-  # ignored by the migrate tool.
-  #
-  # Files that are not part of the templates will be ignored by default.
-  unmanaged_files:
-    - 'lib/main.dart'
-    - 'ios/Runner.xcodeproj/project.pbxproj'
+# Packages that are fetched from source are based on the example in the
+# following link: https://dart.dev/go/ambiguous-import
+# For example:
+# packages:
+#   foo:
+#     path: ../foo/pub_packages/foo
+#   bar:
+#     path: ../bar_club/googlework/bar/pub_packages/bar
+
+# generated-file, do not edit.
