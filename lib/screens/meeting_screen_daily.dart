@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../utils/colors.dart';
 import '../models/user_model.dart';
 import '../models/meeting_model.dart';
+import '../services/permissions_page.dart';
 
 class MeetingScreenDaily extends StatefulWidget {
   final MeetingModel meeting;
@@ -21,66 +21,32 @@ class MeetingScreenDaily extends StatefulWidget {
 
 class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
   late WebViewController _webViewController;
+  bool _permissionsGranted = false;
   bool _isLoading = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _requestPermissionsAndLoad();
+    // Afficher la page de permissions d'abord
+    _showPermissionsPage();
   }
 
-  Future<void> _requestPermissionsAndLoad() async {
-    try {
-      print('🔐 Requesting camera and microphone permissions...');
-
-      // Request permissions one by one
-      final cameraPermission = await Permission.camera.request();
-      final microphonePermission =
-          await Permission.microphone.request();
-
-      print('📷 Camera: $cameraPermission');
-      print('🎤 Microphone: $microphonePermission');
-
-      // Check if permissions were granted
-      if (cameraPermission.isGranted &&
-          microphonePermission.isGranted) {
-        print('✅ All permissions granted');
-        _initializeWebView();
-      } else if (cameraPermission.isDenied ||
-          microphonePermission.isDenied) {
-        print('⚠️ Permissions denied');
-        if (mounted) {
-          setState(() {
-            _errorMessage =
-                'Les permissions camera et microphone sont requises.';
-            _isLoading = false;
-          });
-        }
-      } else if (cameraPermission.isPermanentlyDenied ||
-          microphonePermission.isPermanentlyDenied) {
-        print('❌ Permissions permanently denied');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                  'Permissions refusees. Allez aux parametres.'),
-              backgroundColor: AppColors.danger,
-              action: SnackBarAction(
-                label: 'Parametres',
-                onPressed: () => openAppSettings(),
-              ),
-            ),
-          );
-          _initializeWebView();
-        }
-      } else {
-        _initializeWebView();
-      }
-    } catch (e) {
-      print('❌ Error requesting permissions: $e');
-      _initializeWebView();
-    }
+  void _showPermissionsPage() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PermissionsPage(
+        meetingCode: widget.meeting.id,
+        onPermissionsGranted: (granted) {
+          if (granted) {
+            Navigator.pop(context);
+            setState(() => _permissionsGranted = true);
+            _initializeWebView();
+          }
+        },
+      ),
+    );
   }
 
   void _initializeWebView() {
@@ -125,7 +91,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
   @override
   Widget build(BuildContext context) {
     // LOADING STATE
-    if (_isLoading && _errorMessage == null) {
+    if (_isLoading && _errorMessage == null && !_permissionsGranted) {
       return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
@@ -195,16 +161,12 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
                       _isLoading = true;
                       _errorMessage = null;
                     });
-                    _requestPermissionsAndLoad();
+                    _showPermissionsPage();
                   },
                   icon: const Icon(Icons.refresh),
                   label: const Text('Reessayer'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 12,
-                    ),
                   ),
                 ),
               ],
