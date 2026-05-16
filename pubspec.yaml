@@ -34,8 +34,8 @@ dependencies:
   # Networking
   http: ^1.1.0
 
-  # VideoSDK
-  videosdk: ^1.3.5
+  # VideoSDK - STABLE VERSION
+  videosdk: ^1.1.4
   flutter_webrtc: ^0.9.43
   collection: ^1.17.0
 
