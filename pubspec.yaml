@@ -34,9 +34,9 @@ dependencies:
   # Networking
   http: ^1.1.0
 
-  # ZegoCloud - VERSIONS CORRECTES
-  zego_uikit_prebuilt_video_conference: ^2.12.0
-  zego_uikit: ^2.12.0
+  # ZegoCloud - VERSIONS FINALES ET STABLES
+  zego_uikit_prebuilt_video_conference: ^2.10.1
+  zego_uikit: ^2.10.1
 
   # UI
   cupertino_icons: ^1.0.2
