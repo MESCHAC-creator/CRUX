@@ -31,7 +31,6 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
   bool _isStreaming = false;
   String? _errorMessage;
   File? _coverImage;
-  String? _coverImageUrl;
 
   @override
   void initState() {
@@ -41,7 +40,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
 
   Future<void> _grantPermissionsFirst() async {
     try {
-      print('🔐 Granting permissions permanently...');
+      print('🔐 Requesting permissions...');
 
       final cameraStatus = await Permission.camera.request();
       final micStatus = await Permission.microphone.request();
@@ -55,7 +54,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
       } else {
         setState(() {
           _errorMessage =
-              'Les permissions camera et microphone sont requises pour la videconference.';
+              'Les permissions camera et microphone sont requises.';
           _isLoading = false;
         });
       }
@@ -159,7 +158,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
             print('📱 Loading: $url');
           },
           onPageFinished: (url) {
-            print('✅ Page loaded: $url');
+            print('✅ Page loaded');
             if (mounted) {
               setState(() => _isLoading = false);
             }
@@ -190,9 +189,8 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
       if (image != null) {
         setState(() {
           _coverImage = File(image.path);
-          _coverImageUrl = image.path;
         });
-        print('✅ Image sélectionnée: ${image.path}');
+        print('✅ Image sélectionnée');
       }
     } catch (e) {
       print('❌ Error picking image: $e');
@@ -202,6 +200,8 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
   Future<void> _startYouTubeStream() async {
     final streamKeyController = TextEditingController();
     final streamTitleController = TextEditingController();
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -228,7 +228,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
                 controller: streamTitleController,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'Titre du live (ex: Réunion du jour)',
+                  hintText: 'Titre du live',
                   hintStyle: const TextStyle(color: AppColors.grey),
                   filled: true,
                   fillColor: AppColors.surfaceLight,
@@ -252,30 +252,20 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Vous trouverez votre stream key sur : YouTube Studio > En direct > Configuration',
+                'YouTube Studio > En direct > Configuration',
                 style: TextStyle(
                   color: AppColors.grey,
                   fontSize: 11,
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               const Divider(color: Colors.white10),
-              const SizedBox(height: 16),
-              const Text(
-                'Image de couverture (optionnel)',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _coverImage == null
                   ? ElevatedButton.icon(
                       onPressed: _pickCoverImage,
                       icon: const Icon(Icons.image),
-                      label: const Text('Choisir une image'),
+                      label: const Text('Choisir image'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.surfaceLight,
                       ),
@@ -283,7 +273,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
                   : Column(
                       children: [
                         Container(
-                          height: 150,
+                          height: 120,
                           width: double.infinity,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
@@ -297,7 +287,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
                         ElevatedButton.icon(
                           onPressed: _pickCoverImage,
                           icon: const Icon(Icons.edit),
-                          label: const Text('Changer l\'image'),
+                          label: const Text('Changer'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.surfaceLight,
                           ),
@@ -314,7 +304,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
                 style: TextStyle(color: AppColors.primary)),
           ),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               if (streamKeyController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -323,7 +313,6 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
                 );
                 return;
               }
-
               Navigator.pop(context);
               _activateYouTubeStream(
                 streamKeyController.text.trim(),
@@ -332,7 +321,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF0000)),
-            child: const Text('Demarrer le Stream'),
+            child: const Text('Démarrer'),
           ),
         ],
       ),
@@ -344,13 +333,11 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
     setState(() => _isLoading = true);
 
     try {
-      print('🔴 Starting YouTube stream...');
-
       final success = await YouTubeLiveService.startYouTubeStream(
         widget.meeting.id,
         streamKey,
         streamTitle.isEmpty ? widget.meeting.title : streamTitle,
-        _coverImageUrl,
+        _coverImage?.path,
       );
 
       if (success) {
@@ -361,7 +348,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('🔴 YouTube stream demarré !'),
+              content: Text('🔴 Stream démarré !'),
               backgroundColor: Color(0xFFFF0000),
             ),
           );
@@ -371,14 +358,13 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Erreur : Impossible de démarrer le stream'),
+              content: Text('Erreur: Impossible de démarrer le stream'),
               backgroundColor: AppColors.danger,
             ),
           );
         }
       }
     } catch (e) {
-      print('❌ Error: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -398,10 +384,10 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20)),
-        title: const Text('Arreter le stream ?',
+        title: const Text('Arrêter le stream ?',
             style: TextStyle(color: Colors.white)),
         content: const Text(
-          'Voulez-vous vraiment arreter la diffusion YouTube ?',
+          'Voulez-vous vraiment arrêter ?',
           style: TextStyle(color: AppColors.grey),
         ),
         actions: [
@@ -414,7 +400,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger),
-            child: const Text('Oui, arreter'),
+            child: const Text('Oui'),
           ),
         ],
       ),
@@ -423,9 +409,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
     if (confirmed == true) {
       setState(() => _isLoading = true);
       final success =
-          await YouTubeLiveService.stopYouTubeStream(
-        widget.meeting.id,
-      );
+          await YouTubeLiveService.stopYouTubeStream(widget.meeting.id);
       setState(() {
         _isStreaming = !success;
         _isLoading = false;
@@ -486,7 +470,7 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
                     _grantPermissionsFirst();
                   },
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Reessayer'),
+                  label: const Text('Réessayer'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                   ),
@@ -516,8 +500,8 @@ class _MeetingScreenDailyState extends State<MeetingScreenDaily> {
             ),
             content: Text(
               _isStreaming
-                  ? 'Le stream YouTube est en cours. Voulez-vous vraiment quitter ?'
-                  : 'Voulez-vous quitter cette reunion ?',
+                  ? 'Le stream YouTube est en cours.'
+                  : 'Voulez-vous quitter ?',
               style: const TextStyle(color: Colors.white70),
             ),
             actions: [
