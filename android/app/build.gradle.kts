@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.crux"
-        minSdk = 24
+        minSdk = 21
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -71,6 +71,11 @@ dependencies {
 
     // Google Play Services
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+
+    // VideoSDK dependencies
+    implementation("org.webrtc:google-webrtc:1.0.32006")
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
