@@ -21,6 +21,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
   bool _permissionsGranted = false;
   bool _checkingPermissions = true;
   String _selectedMode = 'standard';
+  bool _isLiveStream = false;
 
   final List<Map<String, dynamic>> _modes = [
     {
@@ -47,6 +48,12 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
       'value': 'enterprise',
       'color': const Color(0xFFF7CAC9),
     },
+    {
+      'name': 'YouTube Live',
+      'icon': '🔴',
+      'value': 'youtube_live',
+      'color': const Color(0xFFFF0000),
+    },
   ];
 
   @override
@@ -57,9 +64,9 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
 
   Future<void> _requestPermissionsAtStartup() async {
     setState(() => _checkingPermissions = true);
-    
+
     final granted = await PermissionService.requestAllPermissions();
-    
+
     if (mounted) {
       setState(() {
         _permissionsGranted = granted;
@@ -170,9 +177,9 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Reunion Creee !',
-          style: TextStyle(
+        title: Text(
+          _isLiveStream ? '🔴 Live YouTube' : 'Reunion Creee !',
+          style: const TextStyle(
             color: AppColors.primary,
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -260,6 +267,41 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
                 ),
               ),
             ),
+            if (_isLiveStream) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF0000).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFFF0000),
+                    width: 1,
+                  ),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '🔴 YouTube Live Stream',
+                      style: TextStyle(
+                        color: Color(0xFFFF0000),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Cette reunion est en direct sur YouTube. Tous les participants seront visibles en live.',
+                      style: TextStyle(
+                        color: AppColors.grey,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
@@ -364,13 +406,14 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
   void _joinMeeting(String code) {
     final meeting = MeetingModel(
       id: code,
-      title: 'Reunion $code',
+      title: _isLiveStream ? '🔴 Live - $code' : 'Reunion $code',
       hostId: widget.user.uid,
       hostName: widget.user.name,
       createdAt: DateTime.now(),
+      mode: _selectedMode,
     );
 
-    print('🔗 Joining meeting: $code');
+    print('🔗 Joining meeting: $code (Live: $_isLiveStream)');
 
     Navigator.push(
       context,
@@ -378,6 +421,7 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
         builder: (context) => MeetingScreenDaily(
           meeting: meeting,
           user: widget.user,
+          isLiveStream: _isLiveStream,
         ),
       ),
     );
@@ -498,8 +542,13 @@ class _HomeScreenDailyState extends State<HomeScreenDaily> {
                     final isSelected =
                         _selectedMode == mode['value'];
                     return GestureDetector(
-                      onTap: () => setState(() =>
-                          _selectedMode = mode['value']),
+                      onTap: () {
+                        setState(() {
+                          _selectedMode = mode['value'];
+                          _isLiveStream =
+                              mode['value'] == 'youtube_live';
+                        });
+                      },
                       child: Container(
                         decoration: BoxDecoration(
                           color: isSelected
