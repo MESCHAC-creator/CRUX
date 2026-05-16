@@ -1,652 +1,160 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../utils/colors.dart';
-import '../models/user_model.dart';
-import '../models/meeting_model.dart';
-import '../services/permission_service.dart';
-import '../widgets/custom_button.dart';
-import 'meeting_screen_daily.dart';
-import 'settings_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'videosdk_config.dart';
 
-class HomeScreenDaily extends StatefulWidget {
-  final UserModel user;
+class VideoSDKService {
+  // Créer un token de réunion
+  static Future<String?> createMeetingToken(String meetingId) async {
+    try {
+      print('🎫 Creating VideoSDK token for meeting: $meetingId');
 
-  const HomeScreenDaily({super.key, required this.user});
+      final response = await http
+          .post(
+            Uri.parse('${VideoSDKConfig.API_URL}/tokens'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': VideoSDKConfig.API_KEY,
+            },
+            body: jsonEncode({
+              'meetingId': meetingId,
+              'name': 'CRUX User',
+              'role': 'SPEAKER',
+            }),
+          )
+          .timeout(VideoSDKConfig.DEFAULT_TIMEOUT);
 
-  @override
-  State<HomeScreenDaily> createState() => _HomeScreenDailyState();
-}
-
-class _HomeScreenDailyState extends State<HomeScreenDaily> {
-  bool _permissionsGranted = false;
-  bool _checkingPermissions = true;
-  String _selectedMode = 'standard';
-  bool _isLiveStream = false;
-
-  final List<Map<String, dynamic>> _modes = [
-    {
-      'name': 'Standard',
-      'icon': '🎯',
-      'value': 'standard',
-      'color': const Color(0xFF2D8CFF),
-    },
-    {
-      'name': 'Eglise',
-      'icon': '⛪',
-      'value': 'church',
-      'color': const Color(0xFF6B5B95),
-    },
-    {
-      'name': 'Ecole',
-      'icon': '🎓',
-      'value': 'education',
-      'color': const Color(0xFF88B04B),
-    },
-    {
-      'name': 'Entreprise',
-      'icon': '💼',
-      'value': 'enterprise',
-      'color': const Color(0xFFF7CAC9),
-    },
-    {
-      'name': 'YouTube Live',
-      'icon': '🔴',
-      'value': 'youtube_live',
-      'color': const Color(0xFFFF0000),
-    },
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _requestPermissionsAtStartup();
-  }
-
-  Future<void> _requestPermissionsAtStartup() async {
-    setState(() => _checkingPermissions = true);
-
-    final granted = await PermissionService.requestAllPermissions();
-
-    if (mounted) {
-      setState(() {
-        _permissionsGranted = granted;
-        _checkingPermissions = false;
-      });
-    }
-
-    if (!granted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-                'Permissions refusees. Allez aux parametres pour les accepter.'),
-            backgroundColor: AppColors.danger,
-            action: SnackBarAction(
-              label: 'Parametres',
-              onPressed: () =>
-                  PermissionService.openAppSettings(),
-            ),
-          ),
-        );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['token'];
+        print('✅ Token created: $token');
+        return token;
+      } else {
+        print('❌ Error: ${response.statusCode} - ${response.body}');
+        return null;
       }
+    } catch (e) {
+      print('❌ Exception: $e');
+      return null;
     }
   }
 
-  void _createMeetingManually() {
-    final codeController = TextEditingController();
+  // Créer une réunion
+  static Future<String?> createMeeting(String meetingId) async {
+    try {
+      print('📞 Creating VideoSDK meeting: $meetingId');
 
-    if (!_permissionsGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Permissions requises'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-      return;
+      // VideoSDK crée automatiquement les réunions
+      // Pas besoin d'appel API pour créer
+      // Simplement utiliser le meetingId
+      print('✅ Meeting ready: $meetingId');
+      return meetingId;
+    } catch (e) {
+      print('❌ Exception: $e');
+      return null;
     }
+  }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
-        title: const Text('Creer Une Reunion',
-            style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Entrez un CODE pour votre reunion (ex: REUNION-1)',
-              style: TextStyle(
-                color: AppColors.grey,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: codeController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Ex: REUNION-JANVIER',
-                hintStyle: const TextStyle(color: AppColors.grey),
-                filled: true,
-                fillColor: AppColors.surfaceLight,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              textCapitalization: TextCapitalization.characters,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler',
-                style: TextStyle(color: AppColors.primary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (codeController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Entrez un code'),
-                      backgroundColor: AppColors.danger),
-                );
-                return;
-              }
+  // Démarrer le live streaming YouTube
+  static Future<bool> startYouTubeLiveStream(
+    String meetingId,
+    String youtubeStreamKey,
+    String streamTitle,
+  ) async {
+    try {
+      print('🔴 Starting YouTube Live Stream...');
 
-              Navigator.pop(context);
-              _showCodeDialog(codeController.text.trim());
+      final response = await http
+          .post(
+            Uri.parse('${VideoSDKConfig.API_URL}/meetings/$meetingId/livestream'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': VideoSDKConfig.API_KEY,
             },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary),
-            child: const Text('Creer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCodeDialog(String code) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          _isLiveStream ? '🔴 Live YouTube' : 'Reunion Creee !',
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Partagez ce CODE avec vos participants :',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.primary,
-                  width: 2,
-                ),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'CODE',
-                    style: TextStyle(
-                      color: AppColors.grey,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    code,
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: code));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Code copie: $code'),
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceLight,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.copy,
-                      color: AppColors.primary,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Copier le code',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (_isLiveStream) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF0000).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFFFF0000),
-                    width: 1,
-                  ),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '🔴 YouTube Live Stream',
-                      style: TextStyle(
-                        color: Color(0xFFFF0000),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Cette reunion est en direct sur YouTube. Tous les participants seront visibles en live.',
-                      style: TextStyle(
-                        color: AppColors.grey,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Fermer',
-              style: TextStyle(color: AppColors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _joinMeeting(code);
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary),
-            child: const Text('Rejoindre'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _joinMeetingWithCode() async {
-    final codeController = TextEditingController();
-
-    if (!_permissionsGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Permissions requises'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
-        title: const Text('Rejoindre Une Reunion',
-            style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Entrez le code de la reunion',
-              style: TextStyle(
-                color: AppColors.grey,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: codeController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Ex: REUNION-JANVIER',
-                hintStyle: const TextStyle(color: AppColors.grey),
-                filled: true,
-                fillColor: AppColors.surfaceLight,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              textCapitalization: TextCapitalization.characters,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler',
-                style: TextStyle(color: AppColors.primary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (codeController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Entrez un code'),
-                      backgroundColor: AppColors.danger),
-                );
-                return;
-              }
-
-              Navigator.pop(context);
-              _joinMeeting(codeController.text.trim());
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary),
-            child: const Text('Rejoindre'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _joinMeeting(String code) {
-    final meeting = MeetingModel(
-      id: code,
-      title: _isLiveStream ? '🔴 Live - $code' : 'Reunion $code',
-      hostId: widget.user.uid,
-      hostName: widget.user.name,
-      createdAt: DateTime.now(),
-      mode: _selectedMode,
-    );
-
-    print('🔗 Joining meeting: $code (Live: $_isLiveStream)');
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MeetingScreenDaily(
-          meeting: meeting,
-          user: widget.user,
-          isLiveStream: _isLiveStream,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_checkingPermissions) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(
-                  color: AppColors.primary),
-              const SizedBox(height: 16),
-              const Text(
-                'Verification des permissions...',
-                style: TextStyle(
-                    color: Colors.white54, fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('CRUX',
-                style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    letterSpacing: 4)),
-            Text(
-              'Bienvenue, ${widget.user.name}',
-              style: const TextStyle(
-                  color: Colors.white60, fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings,
-                color: Colors.white),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    const SettingsScreen(),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (!_permissionsGranted)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              color: AppColors.danger.withOpacity(0.2),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning,
-                      color: AppColors.danger, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: const Text(
-                      'Permissions refusees. Allez aux parametres pour les accepter.',
-                      style: TextStyle(
-                          color: AppColors.danger,
-                          fontSize: 12),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () =>
-                        PermissionService.openAppSettings(),
-                    child: const Text('Parametres',
-                        style: TextStyle(
-                            color: AppColors.primary)),
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(24),
-              children: [
-                const Text('MODE DE REUNION',
-                    style: TextStyle(
-                        color: AppColors.grey,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5)),
-                const SizedBox(height: 12),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1,
-                  ),
-                  itemCount: _modes.length,
-                  itemBuilder: (context, index) {
-                    final mode = _modes[index];
-                    final isSelected =
-                        _selectedMode == mode['value'];
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedMode = mode['value'];
-                          _isLiveStream =
-                              mode['value'] == 'youtube_live';
-                        });
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? mode['color']
-                              : AppColors.surface,
-                          borderRadius:
-                              BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected
-                                ? mode['color']
-                                : Colors.white10,
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
-                          children: [
-                            Text(mode['icon'],
-                                style: const TextStyle(
-                                    fontSize: 32)),
-                            const SizedBox(height: 8),
-                            Text(
-                              mode['name'],
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.white54,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: _createMeetingManually,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add),
-                      SizedBox(width: 8),
-                      Text(
-                        'NOUVELLE REUNION',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: _joinMeetingWithCode,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.surfaceLight,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.login,
-                          color: Colors.white),
-                      SizedBox(width: 8),
-                      Text(
-                        'REJOINDRE REUNION',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            body: jsonEncode({
+              'outputs': [
+                {
+                  'key': youtubeStreamKey,
+                  'url': 'rtmps://a.rtmp.youtube.com/live2',
+                }
               ],
-            ),
-          ),
-        ],
-      ),
-    );
+            }),
+          )
+          .timeout(VideoSDKConfig.DEFAULT_TIMEOUT);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅ YouTube Live Stream started');
+        return true;
+      } else {
+        print('❌ Error: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Exception: $e');
+      return false;
+    }
+  }
+
+  // Arrêter le live streaming
+  static Future<bool> stopYouTubeLiveStream(String meetingId) async {
+    try {
+      print('⏹️ Stopping YouTube Live Stream...');
+
+      final response = await http
+          .delete(
+            Uri.parse('${VideoSDKConfig.API_URL}/meetings/$meetingId/livestream'),
+            headers: {
+              'Authorization': VideoSDKConfig.API_KEY,
+            },
+          )
+          .timeout(VideoSDKConfig.DEFAULT_TIMEOUT);
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('✅ YouTube Live Stream stopped');
+        return true;
+      } else {
+        print('❌ Error: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Exception: $e');
+      return false;
+    }
+  }
+
+  // Obtenir les infos de la réunion
+  static Future<Map<String, dynamic>?> getMeetingInfo(String meetingId) async {
+    try {
+      print('📊 Getting meeting info...');
+
+      final response = await http
+          .get(
+            Uri.parse('${VideoSDKConfig.API_URL}/meetings/$meetingId'),
+            headers: {
+              'Authorization': VideoSDKConfig.API_KEY,
+            },
+          )
+          .timeout(VideoSDKConfig.DEFAULT_TIMEOUT);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data;
+      } else {
+        print('❌ Error: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Exception: $e');
+      return null;
+    }
+  }
+
+  // Valider la configuration
+  static bool validateConfiguration() {
+    if (!VideoSDKConfig.isValidApiKey()) {
+      print('❌ VideoSDK API Key not configured!');
+      return false;
+    }
+    print('✅ VideoSDK configured correctly');
+    return true;
   }
 }
