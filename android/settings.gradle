@@ -1,32 +1,35 @@
+pluginManagement {
+    def flutterSdkPath = {
+        def properties = new Properties()
+        def localPropertiesFile = new File(rootDir.parentFile, 'local.properties')
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.withInputStream { stream -> properties.load(stream) }
+        }
+        def flutterSdkPath = properties.getProperty('flutter.sdk')
+        if (flutterSdkPath == null) {
+            throw new GradleException('Flutter SDK not found. Define location with flutter.sdk in the local.properties file.')
+        }
+        return flutterSdkPath
+    }
+    settings.ext.flutterSdkPath = flutterSdkPath()
+
+    includeBuild("${settings.ext.flutterSdkPath}/packages/flutter_tools/gradle")
+}
+
+plugins {
+    id "dev.flutter.flutter-gradle-plugin" version "1.0.0" apply false
+}
+
 include ':app'
 
 def localPropertiesFile = new File(rootDir, 'local.properties')
 def localProperties = new Properties()
 
 if (localPropertiesFile.exists()) {
-    localPropertiesFile.withReader('UTF-8') { reader ->
-        localProperties.load(reader)
-    }
+    localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) }
 }
 
-def flutterRoot = localProperties.getProperty('flutter.sdk')
-
-// Si flutter.sdk n'est pas défini, chercher automatiquement
-if (flutterRoot == null || flutterRoot.isEmpty()) {
-    // Chercher dans les emplacements courants
-    def possiblePaths = [
-        '/opt/flutter',
-        System.env.FLUTTER_HOME,
-        System.env.FLUTTER_SDK,
-        System.getProperty('user.home') + '/.pub-cache/flutter'
-    ].findAll { it != null && !it.isEmpty() }
-    
-    flutterRoot = possiblePaths.find { new File(it).exists() }
-    
-    if (flutterRoot == null) {
-        throw new GradleException('Flutter SDK not found. Please ensure Flutter is installed and FLUTTER_SDK or FLUTTER_HOME environment variable is set.')
-    }
+def flutterSdkPath = localProperties.getProperty('flutter.sdk')
+if (flutterSdkPath == null) {
+    throw new GradleException('Flutter SDK not found. Define location with flutter.sdk in the local.properties file.')
 }
-
-def flutterGradlePath = flutterRoot + '/packages/flutter_tools/gradle'
-apply from: flutterGradlePath + '/flutter.gradle'
