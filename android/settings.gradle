@@ -10,8 +10,22 @@ if (localPropertiesFile.exists()) {
 }
 
 def flutterRoot = localProperties.getProperty('flutter.sdk')
-if (flutterRoot == null) {
-    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+
+// Si flutter.sdk n'est pas défini, chercher automatiquement
+if (flutterRoot == null || flutterRoot.isEmpty()) {
+    // Chercher dans les emplacements courants
+    def possiblePaths = [
+        '/opt/flutter',
+        System.env.FLUTTER_HOME,
+        System.env.FLUTTER_SDK,
+        System.getProperty('user.home') + '/.pub-cache/flutter'
+    ].findAll { it != null && !it.isEmpty() }
+    
+    flutterRoot = possiblePaths.find { new File(it).exists() }
+    
+    if (flutterRoot == null) {
+        throw new GradleException('Flutter SDK not found. Please ensure Flutter is installed and FLUTTER_SDK or FLUTTER_HOME environment variable is set.')
+    }
 }
 
 def flutterGradlePath = flutterRoot + '/packages/flutter_tools/gradle'
